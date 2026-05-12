@@ -3,7 +3,7 @@ import { fsUtils } from '../core/utils/fs.js';
 import { logger } from '../core/utils/logger.js';
 import path from 'path';
 
-export const removeCommand = async (skillName: string) => {
+export const removeCommand = async (skillName: string, options: { yes?: boolean } = {}) => {
   logger.startSpinner(`Removing skill '${skillName}'...`);
   
   const agents = await detectAgents();

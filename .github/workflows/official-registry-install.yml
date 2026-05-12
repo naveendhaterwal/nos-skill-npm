@@ -1,0 +1,84 @@
+name: Official Registry Install Validation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate-official-install:
+    name: Node ${{ matrix.node-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 20, 22]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install nos-skill@beta Globally
+        run: npm install -g nos-skill@beta
+        shell: bash
+
+      - name: Verify Runtime Availability
+        run: nos-skill list
+        shell: bash
+
+      - name: Test Official Skill Installation (Idempotent)
+        run: |
+          nos-skill add nos/deploy-ai-project --yes
+          nos-skill add nos/deploy-ai-project --yes
+        shell: bash
+
+      - name: Verify Physical Installation exists
+        run: |
+          # The installed skills should be in one of the agent paths
+          # We'll use doctor to see if it detects any issues
+          nos-skill doctor
+          nos-skill installed
+        shell: bash
+
+      - name: Verify Skill Content Integrity
+        run: |
+          # Use inspect to verify skill intelligence engine
+          nos-skill inspect deploy-ai-project
+        shell: bash
+
+      - name: Test Skill Removal
+        run: |
+          nos-skill remove deploy-ai-project --yes
+          nos-skill installed
+        shell: bash
+
+      - name: Install All Official Apps Sequentially
+        run: |
+          nos-skill add nos/analyze-ai-project --yes
+          nos-skill add nos/debug-nosana-deployment --yes
+          nos-skill add nos/deploy-ai-agent --yes
+          nos-skill add nos/deploy-ai-project --yes
+          nos-skill add nos/deploy-persistent-api --yes
+          nos-skill add nos/recommend-gpu-market --yes
+        shell: bash
+
+      - name: Install All Official Engines Sequentially
+        run: |
+          nos-skill add nos/network-monitor --yes
+          nos-skill add nos/node-operator --yes
+          nos-skill add nos/nosana-ai-deployment-operator --yes
+          nos-skill add nos/nosana-deployment-architect --yes
+          nos-skill add nos/nosana-failure-recovery-operator --yes
+          nos-skill add nos/nosana-market-analyst --yes
+          nos-skill add nos/nosana-persistent-service-operator --yes
+          nos-skill add nos/skill-composer --yes
+        shell: bash
+
+      - name: Final System Audit
+        run: |
+          nos-skill installed
+          nos-skill audit --registry
+        shell: bash

@@ -28,15 +28,17 @@ program
 program
   .command('add <source>')
   .description('Install a skill from a GitHub repo, remote URL, or local path.')
-  .action(async (source) => {
-    try { await addCommand(source); } catch (e: any) { logger.error(e.message); process.exit(1); }
+  .option('-y, --yes', 'Automatically approve all prompts', false)
+  .action(async (source, options) => {
+    try { await addCommand(source, options); } catch (e: any) { logger.error(e.message); process.exit(1); }
   });
 
 program
   .command('remove <skill>')
   .description('Remove an installed skill from all agents.')
-  .action(async (skill) => {
-    try { await removeCommand(skill); } catch (e: any) { logger.error(e.message); process.exit(1); }
+  .option('-y, --yes', 'Automatically approve all prompts', false)
+  .action(async (skill, options) => {
+    try { await removeCommand(skill, options); } catch (e: any) { logger.error(e.message); process.exit(1); }
   });
 
 program

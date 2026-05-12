@@ -50,6 +50,11 @@ export const installSkill = async (source: string, isLocal: boolean, agentsToIns
       for (const agent of targetAgents) {
         const destPath = path.join(agent.globalPath, normalized.normalizedName);
         
+        // IDEMPOTENCY: Remove existing installation before re-installing
+        if (await fsUtils.exists(destPath)) {
+          await fsUtils.removeDir(destPath);
+        }
+
         if (normalized.installType === 'symlink') {
           await fsUtils.createSymlink(skillPath, destPath);
           logger.info(`Symlinked to ${agent.name} (${destPath})`);

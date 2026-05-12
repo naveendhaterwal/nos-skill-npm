@@ -3,37 +3,31 @@
     {
       "name": "deploy-ai-project",
       "description": "Deterministic workload orchestration compiler for the Nosana decentralized GPU network.",
-      "url": "github:nosana/deploy-ai-project",
       "tags": ["nosana", "compiler", "orchestration"]
     },
     {
       "name": "debug-nosana-deployment",
       "description": "Deterministic workload telemetry debugger for Nosana infrastructure.",
-      "url": "github:nosana/debug-nosana-deployment",
       "tags": ["nosana", "debugger"]
     },
     {
       "name": "analyze-ai-project",
       "description": "AI workload hardware requirement analyzer for Nosana target networks.",
-      "url": "github:nosana/analyze-ai-project",
       "tags": ["nosana", "analyzer"]
     },
     {
       "name": "recommend-gpu-market",
       "description": "Deterministic market selection router for the Nosana network.",
-      "url": "github:nosana/recommend-gpu-market",
       "tags": ["nosana", "market"]
     },
     {
       "name": "deploy-persistent-api",
       "description": "Deterministic long-running REST/gRPC API deployer for Nosana.",
-      "url": "github:nosana/deploy-persistent-api",
       "tags": ["nosana", "api"]
     },
     {
       "name": "deploy-ai-agent",
       "description": "Autonomous AI agent workload deployer for the Nosana network.",
-      "url": "github:nosana/deploy-ai-agent",
       "tags": ["nosana", "agent"]
     }
   ]

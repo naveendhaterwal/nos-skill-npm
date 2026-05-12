@@ -70,7 +70,9 @@ export const fsUtils = {
   async getDirectories(source: string): Promise<string[]> {
     if (!(await this.exists(source))) return [];
     const entries = await fs.readdir(source, { withFileTypes: true });
-    return entries.filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
+    return entries
+      .filter(dirent => dirent.isDirectory() || dirent.isSymbolicLink())
+      .map(dirent => dirent.name);
   },
 
   async readFile(filePath: string): Promise<string> {
