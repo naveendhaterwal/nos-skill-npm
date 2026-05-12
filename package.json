@@ -1,6 +1,6 @@
 {
   "name": "nos-skill",
-  "version": "0.9.0-beta.2",
+  "version": "0.9.0-beta.3",
   "description": "Universal AI Skill Operating System & Installer",
   "main": "dist/index.js",
   "type": "module",
