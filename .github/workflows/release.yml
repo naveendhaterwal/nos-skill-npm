@@ -32,16 +32,32 @@ jobs:
     - name: Typecheck & Build
       run: npm run build
 
-    - name: NPM Pack Validation
-      run: npm pack
+    - name: NPM Pack (Capture Filename)
+      id: pack
+      run: |
+        PACK_PATH=$(npm pack | tail -n 1)
+        echo "PACK_PATH=${PACK_PATH}" >> $GITHUB_ENV
+      shell: bash
 
-    - name: Test Local Tarball Install
+    - name: E2E Validation (CLI Install)
       run: |
         mkdir e2e-test
         cd e2e-test
         npm init -y
-        npm install ../nos-skill-*.tgz
-        npx nos-skill --help
+        npm install ../${{ env.PACK_PATH }}
+        
+        echo "Running CLI Validation..."
+        npx nos-skill list
+        npx nos-skill search nosana
+        npx nos-skill inspect deploy-ai-project
+        npx nos-skill doctor
+        npx nos-skill init --type minimal test-skill
+        
+        if [ ! -f "test-skill/SKILL.md" ]; then
+          echo "Error: test-skill not scaffolded correctly"
+          exit 1
+        fi
+      shell: bash
 
   publish:
     needs: validate
@@ -56,6 +72,23 @@ jobs:
       
       - run: npm ci
       - run: npm run build
-      - run: npm publish --access public
+      - run: npm publish --access public --tag beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  post-publish-validation:
+    needs: publish
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      - name: Verify Live NPM Package
+        run: |
+          npm install -g nos-skill@beta
+          nos-skill list
+          nos-skill search nosana
+        shell: bash
