@@ -1,4 +1,4 @@
-# nos-skill
+# nos-skill.
 ### Universal AI Skill Runtime & Installer
 
 `nos-skill` is a production-grade CLI for installing, managing, and discovering operational AI skills across all major AI agents and IDEs.
