@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-ecosystem/schema-registry",
+  "title": "Nosana Skill Ecosystem Schema Registry",
+  "description": "Central index of all typed JSON contracts in the Nosana skill ecosystem. Use this to discover contract IDs, their producers, consumers, and file paths.",
+  "version": "1.0.0",
+  "generated_at": "2026-05-12T00:00:00Z",
+  "schemas": [
+
+    {
+      "id": "nosana-skill-composer/orchestration-request",
+      "file": "nosana-skill-composer/contracts/orchestration-request.schema.json",
+      "title": "Orchestration Request",
+      "producer": "external",
+      "consumers": ["nosana-skill-composer"],
+      "description": "Typed high-level deployment intent with 7 intents, topology, budget cap, and approval flag"
+    },
+    {
+      "id": "nosana-skill-composer/orchestration-plan",
+      "file": "nosana-skill-composer/contracts/orchestration-plan.schema.json",
+      "title": "Orchestration Plan",
+      "producer": "nosana-skill-composer",
+      "consumers": ["user-approval-gate"],
+      "description": "Deterministic execution plan with typed steps, dependency graph, cost summary, and failure predictions"
+    },
+    {
+      "id": "nosana-skill-composer/orchestration-result",
+      "file": "nosana-skill-composer/contracts/orchestration-result.schema.json",
+      "title": "Orchestration Result",
+      "producer": "nosana-skill-composer",
+      "consumers": ["external"],
+      "description": "Final typed output with step results, service URLs, job addresses, and terminal state"
+    },
+
+    {
+      "id": "nosana-deployment-architect/deployment-plan",
+      "file": "nosana-deployment-architect/contracts/deployment-plan.schema.json",
+      "title": "Deployment Plan",
+      "producer": "nosana-deployment-architect",
+      "consumers": ["nosana-ai-deployment-operator", "nosana-persistent-service-operator", "nosana-skill-composer"],
+      "description": "Complete deployment specification: job definition, market, strategy, healthcheck, failure predictions"
+    },
+    {
+      "id": "nosana-deployment-architect/workload-classification",
+      "file": "nosana-deployment-architect/contracts/workload-classification.schema.json",
+      "title": "Workload Classification",
+      "producer": "nosana-deployment-architect",
+      "consumers": ["internal"],
+      "description": "Classified workload type, VRAM estimate, framework, and GPU requirement"
+    },
+    {
+      "id": "nosana-deployment-architect/market-routing",
+      "file": "nosana-deployment-architect/contracts/market-routing.schema.json",
+      "title": "Market Routing",
+      "producer": "nosana-deployment-architect",
+      "consumers": ["internal"],
+      "description": "Selected market with routing rationale, fallbacks, and availability score"
+    },
+    {
+      "id": "nosana-deployment-architect/template-selection",
+      "file": "nosana-deployment-architect/contracts/template-selection.schema.json",
+      "title": "Template Selection",
+      "producer": "nosana-deployment-architect",
+      "consumers": ["internal"],
+      "description": "Chosen job template with parameter overrides"
+    },
+    {
+      "id": "nosana-deployment-architect/healthcheck",
+      "file": "nosana-deployment-architect/contracts/healthcheck.schema.json",
+      "title": "Healthcheck Configuration",
+      "producer": "nosana-deployment-architect",
+      "consumers": ["nosana-ai-deployment-operator"],
+      "description": "HTTP healthcheck spec: endpoint, interval, timeout, expected status"
+    },
+    {
+      "id": "nosana-deployment-architect/failure-prediction",
+      "file": "nosana-deployment-architect/contracts/failure-prediction.schema.json",
+      "title": "Failure Prediction",
+      "producer": "nosana-deployment-architect",
+      "consumers": ["nosana-skill-composer", "nosana-ai-deployment-operator"],
+      "description": "Pre-deployment risk predictions with confidence scores and preventive actions"
+    },
+
+    {
+      "id": "nosana-ai-deployment-operator/execution-input",
+      "file": "nosana-ai-deployment-operator/contracts/execution-input.schema.json",
+      "title": "Execution Input",
+      "producer": "nosana-skill-composer",
+      "consumers": ["nosana-ai-deployment-operator"],
+      "description": "Operator invocation payload derived from deployment-plan"
+    },
+    {
+      "id": "nosana-ai-deployment-operator/execution-state",
+      "file": "nosana-ai-deployment-operator/contracts/execution-state.schema.json",
+      "title": "Execution State",
+      "producer": "nosana-ai-deployment-operator",
+      "consumers": ["internal-poller"],
+      "description": "Real-time polling snapshot of job state during execution"
+    },
+    {
+      "id": "nosana-ai-deployment-operator/execution-receipt",
+      "file": "nosana-ai-deployment-operator/contracts/execution-receipt.schema.json",
+      "title": "Execution Receipt",
+      "producer": "nosana-ai-deployment-operator",
+      "consumers": ["nosana-skill-composer", "nosana-failure-recovery-operator"],
+      "description": "Terminal execution outcome with job address, service URLs, final state, and timing"
+    },
+    {
+      "id": "nosana-ai-deployment-operator/failure-report",
+      "file": "nosana-ai-deployment-operator/contracts/failure-report.schema.json",
+      "title": "Failure Report",
+      "producer": "nosana-ai-deployment-operator",
+      "consumers": ["nosana-failure-recovery-operator"],
+      "description": "Classified failure for routing. Maps to incident-input via field-mapping.yaml",
+      "field_mapping": "nosana-failure-recovery-operator/contracts/field-mapping.yaml"
+    },
+
+    {
+      "id": "nosana-failure-recovery-operator/incident-input",
+      "file": "nosana-failure-recovery-operator/contracts/incident-input.schema.json",
+      "title": "Incident Input",
+      "producer": "nosana-ai-deployment-operator (via failure-report), nosana-persistent-service-operator (direct)",
+      "consumers": ["nosana-failure-recovery-operator"],
+      "description": "Unified incident intake. Accepts failure-report embed or direct deployment-manager events",
+      "field_mapping": "nosana-failure-recovery-operator/contracts/field-mapping.yaml"
+    },
+    {
+      "id": "nosana-failure-recovery-operator/failure-classification",
+      "file": "nosana-failure-recovery-operator/contracts/failure-classification.schema.json",
+      "title": "Failure Classification",
+      "producer": "nosana-failure-recovery-operator",
+      "consumers": ["internal"],
+      "description": "Root-cause classification output from taxonomy lookup"
+    },
+    {
+      "id": "nosana-failure-recovery-operator/remediation-plan",
+      "file": "nosana-failure-recovery-operator/contracts/remediation-plan.schema.json",
+      "title": "Remediation Plan",
+      "producer": "nosana-failure-recovery-operator",
+      "consumers": ["nosana-ai-deployment-operator", "nosana-persistent-service-operator", "nosana-skill-composer"],
+      "description": "Ordered recovery actions with operator routing. Consumed via field-mapping.yaml reverse_mapping",
+      "field_mapping": "nosana-failure-recovery-operator/contracts/field-mapping.yaml#reverse_mapping"
+    },
+    {
+      "id": "nosana-failure-recovery-operator/recovery-result",
+      "file": "nosana-failure-recovery-operator/contracts/recovery-result.schema.json",
+      "title": "Recovery Result",
+      "producer": "nosana-failure-recovery-operator",
+      "consumers": ["nosana-skill-composer"],
+      "description": "Terminal recovery outcome: recovered / degraded / fatal / escalated"
+    },
+
+    {
+      "id": "nosana-persistent-service-operator/deployment-request",
+      "file": "nosana-persistent-service-operator/contracts/deployment-request.schema.json",
+      "title": "Deployment Request",
+      "producer": "nosana-skill-composer",
+      "consumers": ["nosana-persistent-service-operator"],
+      "description": "Lifecycle operation request: create, update-revision, scale, stop, start, fund-vault"
+    },
+    {
+      "id": "nosana-persistent-service-operator/deployment-status",
+      "file": "nosana-persistent-service-operator/contracts/deployment-status.schema.json",
+      "title": "Deployment Status",
+      "producer": "nosana-persistent-service-operator",
+      "consumers": ["nosana-skill-composer", "nosana-failure-recovery-operator"],
+      "description": "Lifecycle state snapshot: DRAFT/STARTING/RUNNING/STOPPING/STOPPED/INSUFFICIENT_FUNDS/ERROR/ARCHIVED"
+    },
+    {
+      "id": "nosana-persistent-service-operator/vault-status",
+      "file": "nosana-persistent-service-operator/contracts/vault-status.schema.json",
+      "title": "Vault Status",
+      "producer": "nosana-persistent-service-operator",
+      "consumers": ["nosana-skill-composer", "nosana-failure-recovery-operator"],
+      "description": "NOS balance health: SUFFICIENT/MARGINAL/CRITICAL/DEPLETED with shortfall amount"
+    },
+
+    {
+      "id": "nosana-network-monitor/market-data",
+      "file": "nosana-network-monitor/contracts/market-data.schema.json",
+      "title": "Market Data",
+      "producer": "nosana-network-monitor",
+      "consumers": ["nosana-deployment-architect", "nosana-market-analyst", "nosana-persistent-service-operator", "nosana-skill-composer"],
+      "description": "Live market snapshot: price/sec, queue depth, node count, availability score per market slug"
+    },
+    {
+      "id": "nosana-network-monitor/wallet-status",
+      "file": "nosana-network-monitor/contracts/wallet-status.schema.json",
+      "title": "Wallet Status",
+      "producer": "nosana-network-monitor",
+      "consumers": ["nosana-ai-deployment-operator", "nosana-skill-composer"],
+      "description": "Wallet SOL/NOS balances and deployment readiness flag"
+    },
+
+    {
+      "id": "nosana-market-analyst/cost-estimate",
+      "file": "nosana-market-analyst/contracts/cost-estimate.schema.json",
+      "title": "Cost Estimate",
+      "producer": "nosana-market-analyst",
+      "consumers": ["nosana-skill-composer", "nosana-persistent-service-operator", "nosana-deployment-architect"],
+      "description": "Per-job, hourly, daily, monthly NOS costs with queue contention warning"
+    }
+  ]
+}

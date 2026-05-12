@@ -1,0 +1,18 @@
+{
+  "name": "node-operator",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Compute host infrastructure operator for Nosana node providers.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "node",
+    "gpu",
+    "infrastructure"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "engine"
+}

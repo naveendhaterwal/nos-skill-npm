@@ -1,0 +1,10 @@
+{
+  "name": "operational-skill",
+  "namespace": "global",
+  "version": "1.0.0",
+  "description": "An operational skill with automation scripts.",
+  "author": "community",
+  "tags": ["operational", "automation"],
+  "skillType": "app",
+  "entry": "SKILL.md"
+}

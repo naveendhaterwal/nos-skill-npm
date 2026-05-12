@@ -1,0 +1,10 @@
+{
+  "name": "nosana-engine-template",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Template for building low-level Nosana infrastructure engines.",
+  "author": "nos",
+  "tags": ["nosana", "engine"],
+  "skillType": "engine",
+  "entry": "SKILL.md"
+}

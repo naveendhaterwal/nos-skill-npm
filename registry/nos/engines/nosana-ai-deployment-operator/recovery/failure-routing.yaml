@@ -1,0 +1,138 @@
+# Failure Routing Table
+# The operator classifies failures and ROUTES them. It does NOT diagnose.
+# Deep diagnosis belongs to nosana-failure-recovery-operator.
+#
+# Contract chain:
+#   failure-report.schema.json → [field-mapping.yaml] → incident-input.schema.json
+#   remediation-plan.schema.json → [remediation-consumer.yaml] → operator actions
+#
+# Field mapping:     nosana-failure-recovery-operator/contracts/field-mapping.yaml
+# Remediation sink:  nosana-ai-deployment-operator/routing/remediation-consumer.yaml
+
+routing_rules:
+
+  # === PRE-SUBMISSION FAILURES ===
+
+  - failure_type: "ipfs-upload-failed"
+    severity: "high"
+    detection_pattern: "IPFS|Pinata|upload.*fail|CID"
+    retryable: true
+    max_retries: 2
+    retry_delay_seconds: 5
+    route_to: "self"
+    notes: "Operator retries IPFS upload up to 2 times before escalating"
+
+  - failure_type: "sol-balance-insufficient"
+    severity: "critical"
+    detection_pattern: "insufficient.*SOL|SOL.*balance|lamports"
+    retryable: false
+    route_to: "manual"
+    user_action: "Add SOL to wallet. On devnet: 'solana airdrop 1'. On mainnet: transfer SOL."
+    notes: "Cannot proceed without SOL for transaction fees"
+
+  - failure_type: "nos-balance-insufficient"
+    severity: "critical"
+    detection_pattern: "insufficient.*NOS|NOS.*balance|Needed.*have"
+    retryable: false
+    route_to: "manual"
+    user_action: "Add NOS tokens to wallet or reduce --timeout to lower cost"
+    notes: "Cannot proceed without NOS for job payment"
+
+  - failure_type: "transaction-simulation-failed"
+    severity: "critical"
+    detection_pattern: "Transaction simulation failed|SimulationError"
+    retryable: true
+    max_retries: 1
+    retry_delay_seconds: 10
+    route_to: "nosana-failure-recovery-operator"
+    notes: "May be transient RPC issue or state mismatch"
+
+  - failure_type: "transaction-timeout"
+    severity: "high"
+    detection_pattern: "Transaction.*timeout|confirm.*timeout"
+    retryable: true
+    max_retries: 2
+    retry_delay_seconds: 15
+    route_to: "nosana-failure-recovery-operator"
+    notes: "Solana network congestion"
+
+  # === QUEUE FAILURES ===
+
+  - failure_type: "queue-timeout"
+    severity: "high"
+    detection_pattern: "INTERNAL: elapsed > max_queue_wait_seconds"
+    retryable: false
+    route_to: "nosana-failure-recovery-operator"
+    suggested_action: "Try different market with more nodes, or wait for node availability"
+
+  # === EXECUTION FAILURES ===
+
+  - failure_type: "image-pull-failed"
+    severity: "high"
+    detection_pattern: "ImagePull|image.*not found|pull.*fail|registry"
+    retryable: true
+    max_retries: 1
+    route_to: "nosana-failure-recovery-operator"
+    notes: "May be transient registry issue, or image does not exist"
+
+  - failure_type: "container-oom"
+    severity: "critical"
+    detection_pattern: "OOM|out of memory|killed.*137|signal 9"
+    retryable: false
+    route_to: "nosana-failure-recovery-operator"
+    notes: "Model too large for GPU. Recovery operator should suggest quantization or larger market."
+
+  - failure_type: "container-crash"
+    severity: "high"
+    detection_pattern: "exit code [1-9]|non-zero|crash|segfault|abort"
+    retryable: false
+    route_to: "nosana-failure-recovery-operator"
+
+  - failure_type: "container-nonzero-exit"
+    severity: "medium"
+    detection_pattern: "exit.*[1-9]|ExitCode"
+    retryable: false
+    route_to: "nosana-failure-recovery-operator"
+
+  - failure_type: "frp-exposure-failed"
+    severity: "high"
+    detection_pattern: "FRP|tunnel|expose.*fail|endpoint.*unavailable"
+    retryable: false
+    route_to: "nosana-failure-recovery-operator"
+    notes: "FRP tunnel to node failed — likely port mismatch or 127.0.0.1 binding"
+
+  - failure_type: "healthcheck-timeout"
+    severity: "high"
+    detection_pattern: "health.*check.*fail|health.*timeout|readiness"
+    retryable: false
+    route_to: "nosana-failure-recovery-operator"
+
+  - failure_type: "timeout-expired"
+    severity: "medium"
+    detection_pattern: "timeout|expired|STOPPED.*expired"
+    retryable: false
+    route_to: "manual"
+    user_action: "Extend timeout before expiry, or use INFINITE strategy via persistent-service-operator"
+
+  - failure_type: "node-disconnected"
+    severity: "high"
+    detection_pattern: "node.*disconnect|connection.*lost|peer.*gone"
+    retryable: true
+    max_retries: 0
+    route_to: "nosana-failure-recovery-operator"
+
+  # === CATCH-ALL ===
+
+  - failure_type: "unknown"
+    severity: "medium"
+    detection_pattern: ".*"
+    retryable: false
+    route_to: "nosana-failure-recovery-operator"
+    notes: "Unclassified failure — send full context to recovery operator"
+
+# IMPORTANT: The operator does NOT attempt to fix any of these.
+# It classifies, emits a failure-report.schema.json, and routes.
+# Recovery logic lives in nosana-failure-recovery-operator ONLY.
+#
+# When this operator RECEIVES a remediation-plan back from the recovery operator:
+# → Consult routing/remediation-consumer.yaml for action translation.

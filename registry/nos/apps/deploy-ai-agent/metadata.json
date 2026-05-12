@@ -1,0 +1,17 @@
+{
+  "name": "deploy-ai-agent",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Operational skill for deploying autonomous AI agents on Nosana.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "ai-agent",
+    "deployment"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "app"
+}

@@ -1,0 +1,123 @@
+# Orchestration Lifecycle State Machine
+# Models the async, multi-step lifecycle of a composed orchestration run.
+# This is the control-plane state — not the state of any individual skill.
+
+states:
+
+  PLANNING:
+    description: >
+      Composer is assembling the orchestration plan. Calls nosana-network-monitor,
+      nosana-market-analyst, and nosana-deployment-architect to gather data needed
+      to construct the full orchestration-plan.schema.json.
+    actions:
+      - "Validate orchestration-request.schema.json"
+      - "Invoke nosana-network-monitor → wallet-status.schema.json"
+      - "Invoke nosana-network-monitor → market-data.schema.json"
+      - "Invoke nosana-deployment-architect → deployment-plan.schema.json"
+      - "Invoke nosana-market-analyst → cost-estimate.schema.json"
+      - "Apply budget cap check: if cost > budget_cap_nos → transition to BUDGET_EXCEEDED"
+      - "Assemble orchestration-plan.schema.json with ordered steps and dependency graph"
+    transitions:
+      - to: AWAITING_APPROVAL
+        trigger: "Plan assembled AND require_user_approval == true"
+      - to: DISPATCHING
+        trigger: "Plan assembled AND require_user_approval == false"
+      - to: BUDGET_EXCEEDED
+        trigger: "cost_estimate.total > orchestration_request.budget_cap_nos"
+      - to: FAILED
+        trigger: "deployment-architect returns validation errors or wallet not ready"
+
+  AWAITING_APPROVAL:
+    description: >
+      Orchestration plan has been presented to the user. Execution is blocked
+      until explicit approval is received. The plan is shown as orchestration-plan.schema.json.
+    actions:
+      - "Present orchestration-plan.schema.json to user"
+      - "Include: step list, cost summary, failure predictions, market selection"
+      - "Wait for user approval signal"
+    transitions:
+      - to: DISPATCHING
+        trigger: "User approves plan"
+      - to: FAILED
+        trigger: "User rejects plan"
+
+  DISPATCHING:
+    description: >
+      Executing steps in the orchestration plan sequentially according to depends_on graph.
+      Async steps (blockchain operations) are awaited before downstream steps begin.
+    actions:
+      - "Execute each step in sequence order"
+      - "For async steps: poll the target skill until terminal state reached"
+      - "For two-job topology: extract LLM service_url from step 1 receipt and inject into step 2 job_definition"
+      - "Track step_results in real time"
+      - "On any step failure: evaluate on_failure policy"
+    step_execution_rules:
+      - rule: "Steps with the same sequence number may be dispatched in parallel IF they have no shared depends_on"
+      - rule: "Async steps (async=true) MUST reach terminal state before any step that depends_on them begins"
+      - rule: "URL injection for two-job topology: execution-receipt.service_urls[0].url → agent job env.OPENAI_API_URL"
+      - rule: "All skill invocations MUST pass typed contract payloads — never free text"
+    transitions:
+      - to: SUCCEEDED
+        trigger: "All steps complete with status: succeeded"
+      - to: PARTIAL
+        trigger: "Some steps succeeded but one failed with on_failure: skip"
+      - to: RECOVERING
+        trigger: "A step fails with on_failure: route-to-recovery"
+      - to: FAILED
+        trigger: "A critical step fails with on_failure: abort"
+
+  RECOVERING:
+    description: >
+      A deployment step has failed. Composer has routed the incident to
+      nosana-failure-recovery-operator and is awaiting its remediation-plan.
+    actions:
+      - "Extract failure context from failed step's output or error"
+      - "Build incident-input.schema.json"
+      - "Invoke nosana-failure-recovery-operator"
+      - "Await recovery-result.schema.json"
+    transitions:
+      - to: DISPATCHING
+        trigger: "Recovery operator returns recovery-result with terminal_state: recovered — re-execute failed step"
+      - to: PARTIAL
+        trigger: "Recovery operator returns terminal_state: degraded — step skipped"
+      - to: FAILED
+        trigger: "Recovery operator returns terminal_state: fatal or escalated"
+
+  SUCCEEDED:
+    terminal: true
+    description: "All steps completed. orchestration-result.schema.json emitted with terminal_state: succeeded."
+    actions:
+      - "Assemble orchestration-result.schema.json"
+      - "Include all job_addresses, deployment_ids, service_urls"
+
+  PARTIAL:
+    terminal: true
+    description: "Orchestration completed with some steps skipped due to recoverable failures."
+    actions:
+      - "Assemble orchestration-result.schema.json with terminal_state: partial"
+      - "Document which steps were skipped and why"
+
+  FAILED:
+    terminal: true
+    description: "Orchestration aborted. A critical step failed and could not be recovered."
+    actions:
+      - "Assemble orchestration-result.schema.json with terminal_state: failed"
+      - "Include failure context: failed_step_id, failure_id, error_message"
+
+  BUDGET_EXCEEDED:
+    terminal: true
+    description: "Cost estimate exceeds budget_cap_nos. Execution never started."
+    actions:
+      - "Emit orchestration-result.schema.json with terminal_state: budget-exceeded"
+      - "Include cost_summary showing actual vs cap"
+
+terminal_states: ["SUCCEEDED", "PARTIAL", "FAILED", "BUDGET_EXCEEDED"]
+
+# ASYNC EXECUTION MODEL
+# Nosana is blockchain-async. The following operations are ALWAYS async:
+# - nosana-ai-deployment-operator: job post → queue → execution (minutes to hours)
+# - nosana-persistent-service-operator: deployment create → start → RUNNING
+# - nosana-failure-recovery-operator: incident classification → remediation routing
+#
+# The composer MUST NOT assume synchronous return from these skills.
+# It must poll the downstream skill's output contract until a terminal state is observed.

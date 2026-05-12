@@ -1,0 +1,10 @@
+{
+  "name": "nosana-app-template",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Template for building user-facing Nosana operational apps.",
+  "author": "nos",
+  "tags": ["nosana", "app"],
+  "skillType": "app",
+  "entry": "SKILL.md"
+}

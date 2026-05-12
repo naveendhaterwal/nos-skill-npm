@@ -1,0 +1,10 @@
+{
+  "name": "basic-skill",
+  "namespace": "global",
+  "version": "1.0.0",
+  "description": "A basic operational skill template.",
+  "author": "community",
+  "tags": ["basic"],
+  "skillType": "app",
+  "entry": "SKILL.md"
+}

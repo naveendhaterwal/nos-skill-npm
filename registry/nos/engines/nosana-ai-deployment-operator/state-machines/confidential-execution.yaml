@@ -1,0 +1,104 @@
+# Confidential Execution State Machine
+# Strategy: SIMPLE + --confidential flag
+# Requires the poster's CLI to stay open for P2P definition delivery.
+# Derived from EXECUTION_ENGINE.md logistics + CLI_REFERENCE.md --confidential
+
+states:
+  validating:
+    description: "Same as standard-execution validating"
+    additional_checks:
+      - "job_definition.logistics block must exist with send/receive type: 'api-listen'"
+      - "confidential flag must be set in execution-input"
+    transitions:
+      - to: uploading-placeholder
+        trigger: "All checks pass including logistics block"
+      - to: failed-pre-submission
+        trigger: "Validation failure"
+
+  uploading-placeholder:
+    description: "CLI pins a PLACEHOLDER to IPFS (not the real job definition)"
+    notes: "The actual job definition is NOT pinned publicly. Only a placeholder CID is posted on-chain."
+    transitions:
+      - to: submitting-transaction
+        trigger: "Placeholder CID generated"
+      - to: failed-pre-submission
+        trigger: "IPFS error"
+
+  submitting-transaction:
+    description: "Posting list() with placeholder CID to Solana"
+    transitions:
+      - to: queued-awaiting-claim
+        trigger: "Transaction confirmed"
+      - to: failed-pre-submission
+        trigger: "Transaction failure"
+
+  queued-awaiting-claim:
+    description: "Placeholder job on-chain, waiting for node to claim"
+    polled: true
+    poll_interval_seconds: 5
+    transitions:
+      - to: serving-definition
+        trigger: "Node claims the job (work() executed)"
+      - to: queued-timeout
+        trigger: "No claim within max wait"
+    critical_requirement: "CLI must remain open — it needs to serve the definition on claim"
+
+  serving-definition:
+    description: "Node claimed the job. CLI is now P2P-transmitting the encrypted job definition to the node."
+    cli_command: "nosana job serve (automatic in --confidential mode)"
+    transitions:
+      - to: running
+        trigger: "Node acknowledges receipt and begins execution"
+      - to: failed
+        trigger: "P2P transfer fails (node disconnected, timeout)"
+    timeout: 60
+    notes: "If the poster's CLI disconnects during this phase, the job fails"
+
+  running:
+    description: "Same as standard-execution running"
+    polled: true
+    poll_interval_seconds: 10
+    transitions:
+      - to: completed
+        trigger: "Container exits 0"
+      - to: failed
+        trigger: "Container fails"
+      - to: stopped
+        trigger: "User stop or timeout"
+
+  completed:
+    terminal: true
+    receipt_state: "completed"
+    notes: "Results are encrypted — only the poster can decrypt via CLI"
+    actions:
+      - "Retrieve encrypted results from IPFS"
+      - "Decrypt using poster's keypair"
+      - "Emit execution-receipt.schema.json"
+
+  failed:
+    terminal: true
+    receipt_state: "failed"
+
+  failed-pre-submission:
+    terminal: true
+    receipt_state: "failed"
+
+  stopped:
+    terminal: true
+    receipt_state: "stopped"
+
+  queued-timeout:
+    terminal: true
+    receipt_state: "queued-timeout"
+
+security_invariants:
+  - "Real job definition NEVER appears on IPFS or on-chain"
+  - "Only placeholder CID is publicly visible"
+  - "P2P transfer uses noise protocol encryption"
+  - "Results are encrypted to the poster's public key"
+  - "Poster's CLI MUST stay open until serving-definition phase completes"
+
+cli_requirements:
+  post: "nosana job post --market {market} -f job.json --timeout {timeout} --confidential"
+  serve: "Automatic — CLI enters serve mode after posting"
+  result: "nosana job get {job-address} --download (decrypts automatically with poster's key)"

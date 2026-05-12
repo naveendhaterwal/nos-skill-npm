@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-ai-deployment-operator/execution-receipt",
+  "title": "Execution Receipt",
+  "description": "Structured output produced after a deployment completes, fails, or is stopped. This is the deterministic return value of every execution operation.",
+  "type": "object",
+  "required": ["receipt_version", "execution_id", "final_state", "timestamps", "blockchain", "network"],
+  "properties": {
+    "receipt_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "execution_id": {
+      "type": "string",
+      "description": "Unique identifier for this execution (typically the job address)"
+    },
+    "final_state": {
+      "type": "string",
+      "enum": ["completed", "failed", "stopped", "expired", "cancelled", "queued-timeout"],
+      "description": "Terminal state of the execution"
+    },
+    "timestamps": {
+      "type": "object",
+      "required": ["submitted_at"],
+      "properties": {
+        "submitted_at": { "type": "string", "format": "date-time", "description": "When the job was posted to blockchain" },
+        "queued_at": { "type": ["string", "null"], "format": "date-time" },
+        "claimed_at": { "type": ["string", "null"], "format": "date-time" },
+        "started_at": { "type": ["string", "null"], "format": "date-time" },
+        "completed_at": { "type": ["string", "null"], "format": "date-time" },
+        "total_queue_duration_seconds": { "type": ["number", "null"] },
+        "total_execution_duration_seconds": { "type": ["number", "null"] }
+      }
+    },
+    "blockchain": {
+      "type": "object",
+      "required": ["transaction_hash", "job_address"],
+      "properties": {
+        "transaction_hash": { "type": "string", "description": "Solana transaction signature" },
+        "job_address": { "type": "string", "description": "On-chain job account address" },
+        "run_address": { "type": ["string", "null"], "description": "On-chain run account address" },
+        "ipfs_cid": { "type": ["string", "null"], "description": "IPFS CID of the pinned job definition" },
+        "result_ipfs_cid": { "type": ["string", "null"], "description": "IPFS CID of execution results" }
+      }
+    },
+    "network": {
+      "type": "string",
+      "enum": ["mainnet", "devnet"]
+    },
+    "market": {
+      "type": "string",
+      "description": "Market slug or address used"
+    },
+    "service_urls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "port": { "type": "integer" },
+          "url": { "type": "string", "format": "uri" },
+          "health_status": { "type": "string", "enum": ["online", "offline", "unknown"] }
+        }
+      },
+      "default": [],
+      "description": "FRP-exposed service URLs (empty for non-exposed jobs)"
+    },
+    "cost": {
+      "type": "object",
+      "properties": {
+        "timeout_seconds": { "type": "integer" },
+        "nos_deposited": { "type": ["number", "null"] },
+        "sol_fee": { "type": ["number", "null"] }
+      }
+    },
+    "failure": {
+      "type": ["object", "null"],
+      "properties": {
+        "error_type": {
+          "type": "string",
+          "enum": [
+            "ipfs-upload-failed",
+            "sol-balance-insufficient",
+            "nos-balance-insufficient",
+            "transaction-failed",
+            "queue-timeout",
+            "execution-failed",
+            "container-crash",
+            "timeout-expired",
+            "user-stopped",
+            "unknown"
+          ]
+        },
+        "error_message": { "type": "string" },
+        "recovery_operator": {
+          "type": "string",
+          "enum": ["nosana-failure-recovery-operator", "manual", "none"],
+          "default": "nosana-failure-recovery-operator"
+        }
+      },
+      "description": "Failure details if final_state is failed/stopped/expired"
+    },
+    "cli_commands": {
+      "type": "object",
+      "properties": {
+        "stream_logs": { "type": "string", "description": "Command to stream real-time logs" },
+        "stop_job": { "type": "string", "description": "Command to stop the running job" },
+        "extend_job": { "type": "string", "description": "Command to extend timeout" },
+        "download_artifacts": { "type": "string", "description": "Command to download results" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

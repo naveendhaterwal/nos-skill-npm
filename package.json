@@ -1,0 +1,43 @@
+{
+  "name": "nos-skill",
+  "version": "1.0.0-beta.1",
+  "description": "Universal AI Skill Operating System & Installer",
+  "main": "dist/index.js",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/naveendhaterwal/nos-skill-npm.git"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "registry",
+    "templates"
+  ],
+  "bin": {
+    "nos-skill": "./bin/nos-skill.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "execa": "^9.3.0",
+    "fs-extra": "^11.2.0",
+    "inquirer": "^10.0.3",
+    "ora": "^8.0.1",
+    "simple-git": "^3.25.0",
+    "yaml": "^2.4.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^20.14.9",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.3"
+  }
+}

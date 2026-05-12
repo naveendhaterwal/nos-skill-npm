@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-persistent-service-operator/vault-status",
+  "title": "Vault Status",
+  "description": "Machine-readable vault financial health snapshot. Emitted by vault-check operations. Consumed by recovery and monitoring.",
+  "type": "object",
+  "required": ["vault_address", "deployment_id", "nos_balance", "sufficient", "queried_at"],
+  "properties": {
+    "vault_address": { "type": "string" },
+    "deployment_id": { "type": "string" },
+    "nos_balance": { "type": "number" },
+    "sufficient": {
+      "type": "boolean",
+      "description": "True if balance >= cost of one full job rotation at current market price and timeout."
+    },
+    "required_for_next_rotation": {
+      "type": ["number", "null"],
+      "description": "Estimated NOS needed for next rotation cycle. (market_price_per_second * timeout_seconds)"
+    },
+    "shortfall": {
+      "type": ["number", "null"],
+      "description": "If not sufficient: required_for_next_rotation - nos_balance. Null if sufficient."
+    },
+    "market_price_per_second": { "type": ["number", "null"] },
+    "queried_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

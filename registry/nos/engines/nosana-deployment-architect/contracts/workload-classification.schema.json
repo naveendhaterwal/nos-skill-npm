@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-deployment-architect/workload-classification",
+  "title": "Workload Classification",
+  "description": "Deterministic output contract for classifying a user's deployment request into structured workload parameters. This is the first stage of the deployment architect pipeline.",
+  "type": "object",
+  "required": [
+    "workload_type",
+    "framework",
+    "model",
+    "quantization",
+    "gpu_required",
+    "expose",
+    "persistence",
+    "deployment_type"
+  ],
+  "properties": {
+    "workload_type": {
+      "type": "string",
+      "enum": [
+        "llm-api",
+        "chat-ui",
+        "image-generation",
+        "video-generation",
+        "training",
+        "fine-tuning",
+        "agent-runtime",
+        "development-environment",
+        "speech-to-text",
+        "text-to-speech",
+        "custom-container"
+      ],
+      "description": "Primary workload category derived from user intent"
+    },
+    "framework": {
+      "type": "string",
+      "enum": [
+        "vllm",
+        "tgi",
+        "lmdeploy",
+        "ollama",
+        "open-webui-ollama",
+        "comfyui",
+        "automatic1111",
+        "forge-sd",
+        "invokeai",
+        "axolotl",
+        "kohya-ss",
+        "llama-factory",
+        "jupyter-pytorch",
+        "jupyter-tensorflow",
+        "rstudio",
+        "vscode-server",
+        "whisper-asr",
+        "elizaos",
+        "langchain",
+        "custom"
+      ],
+      "description": "Serving/training framework that determines the container image and cmd pattern"
+    },
+    "model": {
+      "type": "object",
+      "required": ["id", "parameter_count_billions"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "HuggingFace model ID or exact model name (e.g., 'mistralai/Mistral-7B-Instruct-v0.2')"
+        },
+        "parameter_count_billions": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Model size in billions of parameters (e.g., 7, 14, 32, 70)"
+        },
+        "nosana_cdn_available": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether pre-staged weights exist on models.nosana.io"
+        },
+        "nosana_cdn_url": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "S3 URL on models.nosana.io if available"
+        }
+      }
+    },
+    "quantization": {
+      "type": "string",
+      "enum": ["fp16", "fp32", "int8", "int4-awq", "int4-gptq", "gguf-q4", "gguf-q8", "none"],
+      "description": "Model quantization level — directly determines VRAM calculation"
+    },
+    "gpu_required": {
+      "type": "boolean",
+      "description": "Whether gpu:true must be set in the job definition"
+    },
+    "expose": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the workload exposes a network port via FRP"
+        },
+        "port": {
+          "type": ["integer", "null"],
+          "default": null,
+          "description": "Primary port the service listens on"
+        },
+        "requires_zero_bind": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the service MUST bind to 0.0.0.0 (almost always true for exposed services)"
+        },
+        "private_url": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to use random URL generation instead of deterministic hash"
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "volumes_required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether named volumes are needed for data persistence"
+        },
+        "model_prefetch_required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether S3 resource pre-fetching is needed for model weights"
+        }
+      }
+    },
+    "secrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["env_var", "nosana_path"],
+        "properties": {
+          "env_var": { "type": "string" },
+          "nosana_path": { "type": "string", "pattern": "^nosana/.+" }
+        }
+      },
+      "default": [],
+      "description": "Nosana secrets required at runtime (array syntax in env)"
+    },
+    "deployment_type": {
+      "type": "string",
+      "enum": ["one-shot", "persistent-service", "infinite-service", "scheduled", "agent-runtime"],
+      "description": "How this workload should be deployed — determines CLI vs deployment-manager path"
+    },
+    "confidential": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the job definition contains sensitive data requiring P2P encryption"
+    }
+  },
+  "additionalProperties": false
+}

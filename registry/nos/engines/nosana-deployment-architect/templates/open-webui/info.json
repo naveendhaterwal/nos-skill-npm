@@ -1,0 +1,72 @@
+{
+  "id": "open-webui",
+  "name": "Open WebUI with Ollama (Full LLM Chat)",
+  "category": ["chat-ui"],
+  "framework": "open-webui-ollama",
+  "description": "All-in-one chat interface bundled with Ollama for local model management. Users can download and switch models through the UI.",
+
+  "container": {
+    "image": "ghcr.io/open-webui/open-webui:ollama",
+    "default_port": 8080,
+    "bind_address": "0.0.0.0",
+    "gpu_required": true
+  },
+
+  "vram_profiles": {
+    "default": { "required_vram_gb": 16, "notes": "Depends on which model user downloads via UI" },
+    "small-model": { "required_vram_gb": 8, "notes": "3B-7B quantized models" },
+    "large-model": { "required_vram_gb": 24, "notes": "13B+ models" }
+  },
+
+  "deployment_compatibility": {
+    "supports_one_shot": true,
+    "supports_persistent": true,
+    "supports_infinite": true,
+    "supports_scheduled": false,
+    "supports_confidential": false,
+    "recommended_strategy": "INFINITE",
+    "recommended_operator": "nosana-persistent-service-operator"
+  },
+
+  "healthcheck": {
+    "required": false,
+    "reason": "Open WebUI serves its UI immediately; model loading happens on-demand via the UI. Simple port exposure is sufficient.",
+    "simple_expose": true
+  },
+
+  "startup_behavior": {
+    "description": "Open WebUI starts its web server immediately. Ollama downloads models on first user request through the UI. The service is usable before any model is loaded.",
+    "typical_startup_seconds": { "default": 30 },
+    "blocks_until_ready": false,
+    "nosana_cdn_recommended": false
+  },
+
+  "common_failures": [
+    {
+      "type": "oom",
+      "description": "User downloads a model too large for the GPU via the UI",
+      "mitigation": "Select a market with sufficient VRAM headroom (gpu-medium minimum)"
+    },
+    {
+      "type": "timeout-exhaustion",
+      "description": "Chat sessions are interactive; short timeouts cut off active sessions",
+      "mitigation": "Use INFINITE strategy or set timeout >= 3600s"
+    }
+  ],
+
+  "interpolation_variables": {},
+
+  "market_constraints": {
+    "minimum_market": "gpu-small",
+    "recommended_market_by_size": {
+      "default": "gpu-medium"
+    }
+  },
+
+  "timeout_characteristics": {
+    "minimum_viable_timeout_seconds": 600,
+    "recommended_timeout_seconds": 3600,
+    "infinite_deployment_recommended": true,
+    "timeout_reason": "Interactive chat UI — users expect persistent availability"
+  }
+}

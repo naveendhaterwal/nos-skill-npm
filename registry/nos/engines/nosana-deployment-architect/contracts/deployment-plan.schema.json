@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-deployment-architect/deployment-plan",
+  "title": "Deployment Plan",
+  "description": "Complete deterministic output of the deployment architect. This is the final artifact handed to the downstream operator (ai-deployment-operator or persistent-service-operator).",
+  "type": "object",
+  "required": [
+    "plan_version",
+    "workload_classification",
+    "vram_estimate",
+    "market_routing",
+    "template_selection",
+    "job_definition",
+    "cli_command",
+    "failure_predictions",
+    "healthcheck_config",
+    "deployment_strategy"
+  ],
+  "properties": {
+    "plan_version": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Schema version for downstream compatibility checks"
+    },
+    "workload_classification": {
+      "$ref": "workload-classification.schema.json",
+      "description": "Structured workload classification from Phase 1"
+    },
+    "vram_estimate": {
+      "type": "object",
+      "required": ["model_vram_gb", "context_vram_gb", "total_vram_gb", "calculation_method"],
+      "properties": {
+        "model_vram_gb": { "type": "number", "minimum": 0 },
+        "context_vram_gb": { "type": "number", "minimum": 0 },
+        "total_vram_gb": { "type": "number", "minimum": 0 },
+        "calculation_method": {
+          "type": "string",
+          "enum": ["fp16-formula", "int4-formula", "int8-formula", "lookup-table", "user-specified"],
+          "description": "How VRAM was estimated: formula-based or from sizing table"
+        }
+      }
+    },
+    "market_routing": {
+      "$ref": "market-routing.schema.json",
+      "description": "Market selection decision with reasoning"
+    },
+    "template_selection": {
+      "$ref": "template-selection.schema.json",
+      "description": "Which template was selected and why"
+    },
+    "job_definition": {
+      "type": "object",
+      "description": "The complete, valid Nosana job-definition.json ready for posting",
+      "required": ["version", "type", "ops"],
+      "properties": {
+        "version": { "type": "string", "const": "0.1" },
+        "type": { "type": "string", "const": "container" },
+        "meta": { "type": "object" },
+        "global": { "type": "object" },
+        "deployment_id": { "type": "string" },
+        "logistics": { "type": "object" },
+        "ops": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "type", "args"],
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string", "const": "container/run" },
+              "args": {
+                "type": "object",
+                "required": ["image"],
+                "properties": {
+                  "image": { "type": "string" },
+                  "cmd": {},
+                  "env": { "type": "object" },
+                  "gpu": { "type": "boolean" },
+                  "expose": {},
+                  "resources": { "type": "array" },
+                  "volumes": { "type": "array" },
+                  "work_dir": { "type": "string" },
+                  "private": { "type": "boolean" },
+                  "output": { "type": "string" }
+                }
+              },
+              "results": { "type": "object" },
+              "execution": { "type": "object" }
+            }
+          }
+        }
+      }
+    },
+    "cli_command": {
+      "type": "string",
+      "description": "The exact nosana job post command to execute this plan",
+      "pattern": "^nosana job post"
+    },
+    "failure_predictions": {
+      "type": "array",
+      "items": { "$ref": "failure-prediction.schema.json" },
+      "description": "Predicted failure modes with confidence and mitigations"
+    },
+    "healthcheck_config": {
+      "$ref": "healthcheck.schema.json",
+      "description": "Runtime health semantics for this deployment"
+    },
+    "deployment_strategy": {
+      "type": "object",
+      "required": ["strategy", "operator"],
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["SIMPLE", "SIMPLE-EXTEND", "SCHEDULED", "INFINITE"],
+          "description": "Deployment manager strategy (or SIMPLE for one-shot CLI)"
+        },
+        "operator": {
+          "type": "string",
+          "enum": ["nosana-ai-deployment-operator", "nosana-persistent-service-operator"],
+          "description": "Which downstream operator skill should execute this plan"
+        },
+        "timeout_seconds": { "type": "integer", "minimum": 60 },
+        "rotation_time_minutes": { "type": ["integer", "null"], "default": null },
+        "replicas": { "type": "integer", "minimum": 1, "default": 1 },
+        "schedule": { "type": ["string", "null"], "default": null }
+      }
+    },
+    "estimated_cost": {
+      "type": "object",
+      "properties": {
+        "nos_per_second": { "type": "number" },
+        "total_nos_for_timeout": { "type": "number" },
+        "hourly_nos": { "type": "number" },
+        "daily_nos": { "type": "number" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

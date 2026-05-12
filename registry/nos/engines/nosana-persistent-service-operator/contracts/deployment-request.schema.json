@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-persistent-service-operator/deployment-request",
+  "title": "Deployment Request",
+  "description": "Input contract for creating or updating a persistent deployment via the deployment-manager. Consumed from nosana-deployment-architect's deployment-plan.schema.json (deployment_strategy block).",
+  "type": "object",
+  "required": ["request_version", "operation", "strategy", "market", "job_definition", "timeout_seconds"],
+  "properties": {
+    "request_version": { "type": "string", "const": "1.0.0" },
+    "operation": {
+      "type": "string",
+      "enum": ["create", "update-revision", "scale", "stop", "start", "fund-vault"],
+      "description": "The deployment lifecycle operation to perform"
+    },
+    "deployment_id": {
+      "type": ["string", "null"],
+      "description": "Required for update-revision, scale, stop, start, fund-vault. Null for create."
+    },
+    "name": {
+      "type": ["string", "null"],
+      "description": "Human-readable deployment name. Required for create."
+    },
+    "strategy": {
+      "type": "string",
+      "enum": ["INFINITE", "SCHEDULED", "SIMPLE", "SIMPLE-EXTEND"],
+      "description": "Deployment lifecycle strategy. INFINITE = always-on rotation. SCHEDULED = cron. SIMPLE = one-shot via deployment-manager. SIMPLE-EXTEND = one-shot with extension."
+    },
+    "market": {
+      "type": "string",
+      "description": "Market slug or Solana PublicKey address"
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 86400,
+      "description": "Per-job timeout in seconds. Rotation fires at timeout - rotation_offset_seconds."
+    },
+    "rotation_offset_seconds": {
+      "type": "integer",
+      "default": 300,
+      "description": "How many seconds before timeout to post the replacement job (INFINITE only)."
+    },
+    "replicas": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 1,
+      "description": "Number of concurrent running job instances (INFINITE only)."
+    },
+    "schedule": {
+      "type": ["string", "null"],
+      "description": "Cron expression for SCHEDULED strategy. Example: '0 */6 * * *' (every 6 hours)."
+    },
+    "job_definition": {
+      "type": "object",
+      "description": "Full Nosana job definition object. Must be a valid job definition conforming to nosana-deployment-architect output.",
+      "required": ["version", "type", "ops"]
+    },
+    "confidential": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to deploy using confidential mode (encrypted job definition)."
+    },
+    "network": {
+      "type": "string",
+      "enum": ["mainnet", "devnet"],
+      "default": "mainnet"
+    },
+    "deployment_manager_url": {
+      "type": "string",
+      "description": "Base URL of the deployment-manager REST API. Must be set in environment as DEPLOYMENT_MANAGER_URL.",
+      "default": "${DEPLOYMENT_MANAGER_URL}"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,58 @@
+# Vault Monitoring State Machine
+# Models the vault funding lifecycle independently from the deployment lifecycle.
+
+states:
+
+  CHECKING:
+    description: "Fetching vault address and querying NOS balance."
+    actions:
+      - "GET /deployments/:id → extract vault address"
+      - "spl-token balance <NOS_MINT> --owner <vault_address>"
+      - "GET /deployments/:id → extract market address and timeout"
+      - "Query market price from Explorer API"
+    transitions:
+      - to: SUFFICIENT
+        trigger: "nos_balance >= required_for_next_rotation"
+      - to: MARGINAL
+        trigger: "nos_balance >= 1x rotation cost AND < 3x rotation cost"
+      - to: CRITICAL
+        trigger: "nos_balance > 0 AND < 1x rotation cost"
+      - to: DEPLETED
+        trigger: "nos_balance == 0 OR deployment status == INSUFFICIENT_FUNDS"
+
+  SUFFICIENT:
+    description: "Vault has adequate NOS for multiple rotation cycles."
+    actions:
+      - "Emit vault-status.schema.json with sufficient: true"
+    transitions:
+      - to: CHECKING
+        trigger: "Periodic re-check interval elapsed"
+
+  MARGINAL:
+    description: "Vault has < 3 rotation cycles worth of NOS. Warn but do not halt."
+    actions:
+      - "Emit vault-status.schema.json with sufficient: true but include warning"
+    transitions:
+      - to: CHECKING
+        trigger: "Periodic re-check interval elapsed"
+
+  CRITICAL:
+    description: "Vault has < 1 rotation cycle worth of NOS. Next rotation will fail."
+    actions:
+      - "Emit vault-status.schema.json with sufficient: false"
+      - "Route failure to nosana-failure-recovery-operator (DM_FUNDS_001)"
+    transitions:
+      - to: CHECKING
+        trigger: "User has been alerted and check is retried"
+
+  DEPLETED:
+    description: "Vault is empty. Deployment is INSUFFICIENT_FUNDS or about to be."
+    actions:
+      - "Emit vault-status.schema.json with sufficient: false and full shortfall amount"
+      - "Route failure to nosana-failure-recovery-operator (DM_FUNDS_001) with severity: fatal"
+    transitions:
+      - to: CHECKING
+        trigger: "Vault replenishment detected on re-check"
+
+# Cost formula for required_for_next_rotation:
+# required = (market.jobPrice / 1_000_000) * timeout_seconds * replicas

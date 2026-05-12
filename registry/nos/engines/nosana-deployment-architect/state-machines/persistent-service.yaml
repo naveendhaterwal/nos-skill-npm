@@ -1,0 +1,160 @@
+# Persistent/Infinite Service Lifecycle State Machine
+# Strategy: INFINITE (Deployment Manager)
+# Operator: nosana-persistent-service-operator
+# Path: Deployment Manager REST API → Job Rotation Loop → Stable URL
+
+# This is the MOST COMPLEX lifecycle — includes hot-rotation, vault funding, and degradation.
+# Canonical states derived from DEPLOYMENT_MANAGER.md
+
+deployment_states:
+  draft:
+    description: "Deployment created via POST /deployments but not started"
+    transitions:
+      - to: starting
+        trigger: "POST /deployments/{id}/start OR autoStart=true on creation"
+    api_action: "POST /deployments"
+
+  starting:
+    description: "Deployment Manager posting initial job to Solana via SDK"
+    transitions:
+      - to: running
+        trigger: "First job successfully posted and enters queue"
+      - to: error
+        trigger: "SDK job posting fails (NOS insufficient, RPC error)"
+
+  running:
+    description: "At least one job is active — service is available"
+    sub_states:
+      job_queued:
+        description: "Rotation job is in market queue"
+        transitions:
+          - to: job_claimed
+            trigger: "Node claims the rotation job"
+      job_claimed:
+        description: "Node initializing the rotation job"
+        transitions:
+          - to: job_executing
+      job_executing:
+        description: "Container running — service is actively serving"
+        sub_states:
+          pulling_image:
+            description: "Image being pulled on new node"
+          exposing:
+            description: "FRP tunnel being established"
+          health_checking:
+            description: "Waiting for health check to pass"
+          online:
+            description: "Service is healthy and receiving traffic"
+          degraded:
+            description: "Health checks failing but container still running"
+    rotation_behavior:
+      trigger: "rotation_time minutes before job timeout"
+      action: "Post new job to same market while current job still running"
+      overlap: "Both jobs run simultaneously during handoff"
+      url_stability: "deployment_id ensures URL remains stable across rotations"
+    transitions:
+      - to: rotating
+        trigger: "Rotation timer fires"
+      - to: stopping
+        trigger: "DELETE /deployments/{id} or POST /deployments/{id}/stop"
+      - to: insufficient_funds
+        trigger: "Vault NOS balance cannot cover next rotation"
+      - to: error
+        trigger: "Job completes unexpectedly (container crash) AND no rotation pending"
+
+  rotating:
+    description: "Hot-rotation in progress — new job being posted while old job still serves"
+    transitions:
+      - to: running
+        trigger: "New job successfully claims and starts serving"
+      - to: error
+        trigger: "New job fails to post or claim"
+    mechanics:
+      - "1. Deployment Manager posts new job with same job_definition"
+      - "2. New job enters queue on same market"
+      - "3. New node claims and starts new container"
+      - "4. Both containers run simultaneously (URL is stable via deployment_id)"
+      - "5. Old job is stopped after new job is online"
+      - "6. Task: old_task → EXPIRING, new_task → RUNNING"
+
+  insufficient_funds:
+    description: "Vault NOS balance depleted — cannot fund next rotation"
+    transitions:
+      - to: running
+        trigger: "User deposits NOS to vault → balance check succeeds"
+      - to: stopped
+        trigger: "Current job times out without rotation"
+    alerts:
+      - "Warn user: NOS vault needs funding at vault_address"
+      - "Current job will expire at timeout without replacement"
+
+  stopping:
+    description: "Stop requested — waiting for active jobs to terminate"
+    transitions:
+      - to: stopped
+        trigger: "All active jobs stopped"
+
+  stopped:
+    description: "Deployment is inactive — no jobs running"
+    transitions:
+      - to: starting
+        trigger: "POST /deployments/{id}/start (restart)"
+      - to: archived
+        trigger: "User deletes deployment"
+
+  error:
+    description: "Deployment encountered an error in the management loop"
+    transitions:
+      - to: starting
+        trigger: "Deployment Manager retries (automatic or manual restart)"
+      - to: stopped
+        trigger: "Manual intervention to stop"
+    error_types:
+      - "Job posting failure (SDK/RPC error)"
+      - "Rapid completion loop (container crashes immediately after start)"
+      - "Queue starvation (no nodes available)"
+      - "FRP tunnel failure"
+
+  archived:
+    description: "Permanently deactivated deployment"
+    terminal: true
+
+# Job-level states within each rotation
+job_states:
+  queued:
+    description: "Job posted to blockchain, waiting for node"
+  running:
+    description: "Node executing the job"
+  expiring:
+    description: "Job nearing timeout, rotation replacement being posted"
+  completed:
+    description: "Job finished (normal rotation handoff)"
+  failed:
+    description: "Job failed (error condition)"
+  stopped:
+    description: "Job manually stopped"
+
+# Deployment Manager task lifecycle
+task_states:
+  QUEUED: "Initial state after job post"
+  RUNNING: "Job claimed and executing"
+  COMPLETED: "Job finished normally"
+  FAILED: "Job failed"
+  STOPPING: "Stop requested"
+  STOPPED: "Job stopped"
+  EXPIRING: "Timeout approaching, rotation triggered"
+  EXPIRED: "Timed out without rotation"
+
+# Recovery patterns
+recovery:
+  container_crash:
+    detection: "Job completes within seconds of starting (rapid completion)"
+    action: "Deployment Manager automatically posts new job after delay"
+    escalation: "After 3 rapid completions, pause deployment and alert"
+  vault_depletion:
+    detection: "NOS balance check fails before posting rotation job"
+    action: "Set deployment to INSUFFICIENT_FUNDS state"
+    recovery: "User deposits NOS to vault address"
+  queue_starvation:
+    detection: "Job stays QUEUED beyond expected claim time"
+    action: "Alert user, suggest trying different market"

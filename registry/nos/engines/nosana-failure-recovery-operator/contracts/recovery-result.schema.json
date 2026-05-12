@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-failure-recovery-operator/recovery-result",
+  "title": "Recovery Result",
+  "description": "Final output of a recovery operation. Captures whether recovery succeeded, what was done, and final state.",
+  "type": "object",
+  "required": ["result_version", "incident_id", "outcome", "classification", "remediation_executed", "timestamps"],
+  "properties": {
+    "result_version": { "type": "string", "const": "1.0.0" },
+    "incident_id": { "type": "string" },
+    "outcome": {
+      "type": "string",
+      "enum": ["recovered", "degraded", "escalated", "fatal", "abandoned", "pending-user-action"]
+    },
+    "classification": { "$ref": "failure-classification.schema.json" },
+    "remediation_executed": {
+      "type": "object",
+      "properties": {
+        "strategy_used": { "type": "string" },
+        "actions_completed": { "type": "integer" },
+        "actions_total": { "type": "integer" },
+        "retries_attempted": { "type": "integer" },
+        "modifications_applied": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "timestamps": {
+      "type": "object",
+      "properties": {
+        "incident_detected_at": { "type": "string", "format": "date-time" },
+        "classification_completed_at": { "type": "string", "format": "date-time" },
+        "remediation_started_at": { "type": ["string", "null"], "format": "date-time" },
+        "resolved_at": { "type": ["string", "null"], "format": "date-time" },
+        "total_resolution_seconds": { "type": ["number", "null"] }
+      }
+    },
+    "escalation": {
+      "type": ["object", "null"],
+      "properties": {
+        "escalated_to": { "type": "string" },
+        "reason": { "type": "string" },
+        "context_passed": { "type": "object" }
+      }
+    },
+    "new_job_address": {
+      "type": ["string", "null"],
+      "description": "If recovery involved re-posting, the new job address"
+    }
+  },
+  "additionalProperties": false
+}

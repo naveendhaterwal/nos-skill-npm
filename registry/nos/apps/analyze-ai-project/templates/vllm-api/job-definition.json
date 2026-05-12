@@ -1,0 +1,45 @@
+{
+  "version": "0.1",
+  "type": "container",
+  "meta": {
+    "system_requirements": {
+      "required_vram": 16
+    }
+  },
+  "global": {
+    "variables": {
+      "MODEL": "mistralai/Mistral-7B-Instruct-v0.2",
+      "PORT": "8000"
+    }
+  },
+  "ops": [
+    {
+      "id": "vllm-server",
+      "type": "container/run",
+      "args": {
+        "image": "docker.io/vllm/vllm-openai:v0.10.2",
+        "cmd": [
+          "--model", "%%global.variables.MODEL%%",
+          "--served-model-name", "%%global.variables.MODEL%%",
+          "--port", "%%global.variables.PORT%%",
+          "--max-model-len", "8192"
+        ],
+        "gpu": true,
+        "expose": {
+          "port": 8000,
+          "health_checks": [
+            {
+              "type": "http",
+              "method": "POST",
+              "path": "/v1/chat/completions",
+              "body": "{\"model\":\"%%global.variables.MODEL%%\",\"messages\":[{\"role\":\"user\",\"content\":\"Ready\"}],\"stream\":false}",
+              "headers": { "Content-Type": "application/json" },
+              "expected_status": 200,
+              "continuous": false
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

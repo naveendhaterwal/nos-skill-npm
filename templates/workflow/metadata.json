@@ -1,0 +1,10 @@
+{
+  "name": "workflow-skill",
+  "namespace": "global",
+  "version": "1.0.0",
+  "description": "A skill focused on complex workflows.",
+  "author": "community",
+  "tags": ["workflow"],
+  "skillType": "app",
+  "entry": "SKILL.md"
+}

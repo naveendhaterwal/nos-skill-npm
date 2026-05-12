@@ -1,0 +1,18 @@
+{
+  "name": "debug-nosana-deployment",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Deterministic incident-response engine for Nosana. Classifies failures and plans remediation.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "sre",
+    "recovery",
+    "diagnostics"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "app"
+}

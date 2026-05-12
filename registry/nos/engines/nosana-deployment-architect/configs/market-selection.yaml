@@ -1,0 +1,37 @@
+markets:
+  gpu-micro:
+    description: "Ideal for very small models, OCR, fine-tuning scripts"
+    vram_limit: 8GB
+    typical_gpu: "RTX 3060, RTX 4060"
+    price_level: "low"
+    
+  gpu-small:
+    description: "Ideal for 7B 4-bit models, general development"
+    vram_limit: 12GB
+    typical_gpu: "RTX 3060, RTX 4070"
+    price_level: "low"
+    
+  gpu-medium:
+    description: "Ideal for 7B FP16 models, 14B 4-bit models, SD generation"
+    vram_limit: 16GB
+    typical_gpu: "RTX 4080, RTX 3080 Ti"
+    price_level: "medium"
+    
+  gpu-large:
+    description: "Ideal for 32B 4-bit models, 14B FP16 models"
+    vram_limit: 24GB
+    typical_gpu: "RTX 3090, RTX 4090"
+    price_level: "high"
+    
+  gpu-x-large:
+    description: "Ideal for large 70B+ models, multi-GPU workloads"
+    vram_limit: 48GB
+    typical_gpu: "Multi-RTX 3090/4090, A6000"
+    price_level: "premium"
+
+selection_rules:
+  - if required_vram <= 8: return "gpu-micro"
+  - if required_vram <= 12: return "gpu-small"
+  - if required_vram <= 16: return "gpu-medium"
+  - if required_vram <= 24: return "gpu-large"
+  - if required_vram > 24: return "gpu-x-large"

@@ -1,0 +1,81 @@
+# Agent Runtime Lifecycle State Machine
+# Extends persistent-service with two-job orchestration pattern.
+# Canonical from AGENT_PATTERNS.md
+
+description: >
+  Agent runtimes typically require TWO coordinated deployments:
+  1. LLM Backend (vLLM/Ollama) — provides OpenAI-compatible API
+  2. Agent Service (ElizaOS/LangChain/CrewAI) — consumes LLM API
+
+  The agent deployment is dependent on the LLM URL being available.
+  Both should use INFINITE strategy for stable endpoint URLs.
+
+phases:
+  phase_1_llm_deployment:
+    description: "Deploy the LLM backend first"
+    lifecycle: "persistent-service.yaml"
+    output: "LLM service URL (https://<hash>.nosana.app)"
+    requirements:
+      - "GPU-capable market (gpu-medium or larger)"
+      - "INFINITE strategy for stable URL"
+      - "deployment_id for URL determinism"
+
+  phase_2_agent_deployment:
+    description: "Deploy the agent with LLM URL as environment variable"
+    lifecycle: "persistent-service.yaml"
+    dependencies:
+      - "phase_1_llm_deployment.output.service_url → OPENAI_API_URL"
+    requirements:
+      - "May or may not need GPU (framework-dependent)"
+      - "INFINITE strategy for stable agent endpoint"
+      - "deployment_id for stable agent URL"
+    env_injection:
+      OPENAI_API_URL: "{{phase_1.service_url}}"
+      OPENAI_API_KEY: "nosana"
+      MODEL_NAME: "{{workload_classification.model.id}}"
+
+orchestration_pattern:
+  single_job:
+    description: "Agent and LLM in same container (e.g., Open WebUI with Ollama)"
+    when: "Framework bundles LLM engine (open-webui:ollama image)"
+    jobs_required: 1
+
+  two_job:
+    description: "Separate LLM and Agent containers"
+    when: "Agent framework uses external OpenAI-compatible API"
+    jobs_required: 2
+    coordination: "Sequential — LLM must be online before agent deploys"
+
+  multi_model:
+    description: "Agent consumes multiple LLM backends"
+    when: "Agent needs different models for different tasks (e.g., OpenClaw pattern)"
+    jobs_required: "N+1 (N LLMs + 1 agent)"
+    env_pattern:
+      GLM_ENDPOINT: "{{llm_1.service_url}}"
+      GPT_ENDPOINT: "{{llm_2.service_url}}"
+
+url_stability:
+  mechanism: "deployment_id in job definition"
+  formula: "URL = hash(deployment_id + owner_pubkey, op_id).<frp-server>"
+  property: "URL is stable across job rotations for the same deployment_id"
+  critical_for: "Agent integrations (webhooks, API clients) that cache the URL"
+
+states:
+  # Inherits all states from persistent-service.yaml
+  # Additional agent-specific states:
+  waiting_for_llm:
+    description: "Agent deployment blocked until LLM backend is online"
+    transitions:
+      - to: starting
+        trigger: "LLM service URL returns 200 on health check"
+      - to: failed
+        trigger: "LLM deployment failed"
+
+recovery:
+  llm_goes_down:
+    detection: "Agent's OPENAI_API_URL returns connection refused"
+    action: "Check LLM deployment status via deployment-manager API"
+    escalation: "Alert user, restart LLM deployment"
+  agent_crash:
+    detection: "Agent container exits unexpectedly"
+    action: "INFINITE strategy handles automatic rotation"

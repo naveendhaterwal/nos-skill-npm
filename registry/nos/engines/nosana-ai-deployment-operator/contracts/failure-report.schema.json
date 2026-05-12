@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-ai-deployment-operator/failure-report",
+  "title": "Failure Report",
+  "description": "Classified failure for routing to the appropriate recovery skill. The operator does NOT diagnose — it classifies and routes.",
+  "type": "object",
+  "required": ["report_version", "job_address", "failure_type", "severity", "recovery_routing"],
+  "properties": {
+    "report_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "job_address": {
+      "type": "string"
+    },
+    "failure_type": {
+      "type": "string",
+      "enum": [
+        "ipfs-upload-failed",
+        "sol-balance-insufficient",
+        "nos-balance-insufficient",
+        "transaction-simulation-failed",
+        "transaction-timeout",
+        "queue-timeout",
+        "image-pull-failed",
+        "container-oom",
+        "container-crash",
+        "container-nonzero-exit",
+        "frp-exposure-failed",
+        "healthcheck-timeout",
+        "timeout-expired",
+        "node-disconnected",
+        "unknown"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low"]
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Raw error text from CLI output or logs"
+    },
+    "error_context": {
+      "type": "object",
+      "description": "Structured context to pass to the recovery operator",
+      "properties": {
+        "execution_state_at_failure": { "type": "string" },
+        "elapsed_seconds": { "type": "number" },
+        "market": { "type": "string" },
+        "exit_code": { "type": ["integer", "null"] },
+        "log_tail": { "type": ["string", "null"], "description": "Last 50 lines of container stdout/stderr" }
+      }
+    },
+    "recovery_routing": {
+      "type": "object",
+      "required": ["target_skill"],
+      "properties": {
+        "target_skill": {
+          "type": "string",
+          "enum": ["nosana-failure-recovery-operator", "manual"],
+          "description": "Where to route this failure for diagnosis and recovery"
+        },
+        "suggested_action": {
+          "type": "string",
+          "description": "High-level action hint (not diagnosis)"
+        },
+        "retryable": {
+          "type": "boolean",
+          "description": "Whether the operator can safely retry the same job"
+        },
+        "max_retries": {
+          "type": "integer",
+          "default": 0,
+          "description": "How many automatic retries the operator may attempt before escalating"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

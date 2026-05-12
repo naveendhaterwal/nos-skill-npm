@@ -1,0 +1,114 @@
+{
+  "id": "vllm-api",
+  "name": "vLLM OpenAI-Compatible API Server",
+  "category": ["llm-api"],
+  "framework": "vllm",
+  "description": "Deploys any HuggingFace LLM as an OpenAI-compatible API endpoint using vLLM. Supports chat completions, text completions, and embeddings.",
+
+  "container": {
+    "image": "docker.io/vllm/vllm-openai:v0.10.2",
+    "default_port": 8000,
+    "bind_address": "0.0.0.0",
+    "gpu_required": true
+  },
+
+  "vram_profiles": {
+    "7b-fp16":  { "required_vram_gb": 16, "max_model_len": 8192 },
+    "7b-int4":  { "required_vram_gb": 7,  "max_model_len": 8192 },
+    "14b-fp16": { "required_vram_gb": 32, "max_model_len": 8192 },
+    "14b-int4": { "required_vram_gb": 14, "max_model_len": 8192 },
+    "32b-fp16": { "required_vram_gb": 72, "max_model_len": 4096 },
+    "32b-int4": { "required_vram_gb": 30, "max_model_len": 8192 },
+    "70b-fp16": { "required_vram_gb": 156, "max_model_len": 2048 },
+    "70b-int4": { "required_vram_gb": 64, "max_model_len": 4096 }
+  },
+
+  "deployment_compatibility": {
+    "supports_one_shot": true,
+    "supports_persistent": true,
+    "supports_infinite": true,
+    "supports_scheduled": false,
+    "supports_confidential": true,
+    "recommended_strategy": "INFINITE",
+    "recommended_operator": "nosana-persistent-service-operator"
+  },
+
+  "healthcheck": {
+    "required": true,
+    "endpoint": {
+      "path": "/v1/chat/completions",
+      "method": "POST",
+      "body_template": "{\"model\":\"{{MODEL_NAME}}\",\"messages\":[{\"role\":\"user\",\"content\":\"Ready\"}],\"stream\":false}",
+      "headers": { "Content-Type": "application/json" },
+      "expected_status": 200
+    },
+    "startup_grace_periods": {
+      "7b": 120,
+      "14b": 180,
+      "32b": 300,
+      "70b": 600
+    },
+    "continuous": false
+  },
+
+  "startup_behavior": {
+    "description": "vLLM downloads model weights from HuggingFace (or reads from pre-staged S3 resource), loads into GPU VRAM, then starts HTTP server. No traffic is served until model is fully loaded.",
+    "typical_startup_seconds": {
+      "7b": 60,
+      "14b": 120,
+      "32b": 240,
+      "70b": 480
+    },
+    "blocks_until_ready": true,
+    "nosana_cdn_recommended": true
+  },
+
+  "common_failures": [
+    {
+      "type": "oom",
+      "description": "Model + context exceeds GPU VRAM",
+      "mitigation": "Reduce --max-model-len, use quantized model, or select larger market"
+    },
+    {
+      "type": "localhost-bind",
+      "description": "vLLM defaults to 0.0.0.0 but custom wrappers may bind to 127.0.0.1",
+      "mitigation": "Ensure --host 0.0.0.0 in cmd args if using custom entrypoint"
+    },
+    {
+      "type": "healthcheck-timeout",
+      "description": "Large models take 5+ minutes to load; health check fails before model is ready",
+      "mitigation": "Set continuous:false and allow sufficient startup time"
+    },
+    {
+      "type": "image-pull-failure",
+      "description": "vLLM images are large (5-8GB); may timeout on slow nodes",
+      "mitigation": "Use specific version tag, not :latest"
+    }
+  ],
+
+  "interpolation_variables": {
+    "MODEL": "HuggingFace model ID (e.g., mistralai/Mistral-7B-Instruct-v0.2)",
+    "PORT": "Listening port (default: 8000)"
+  },
+
+  "market_constraints": {
+    "minimum_market": "gpu-small",
+    "recommended_market_by_size": {
+      "7b-int4": "gpu-small",
+      "7b-fp16": "gpu-medium",
+      "14b-int4": "gpu-medium",
+      "14b-fp16": "gpu-large",
+      "32b-int4": "gpu-large",
+      "32b-fp16": "gpu-x-large",
+      "70b-int4": "gpu-x-large",
+      "70b-fp16": "multi-gpu"
+    }
+  },
+
+  "timeout_characteristics": {
+    "minimum_viable_timeout_seconds": 300,
+    "recommended_timeout_seconds": 3600,
+    "infinite_deployment_recommended": true,
+    "timeout_reason": "LLM APIs are typically long-running services; short timeouts cause service disruption"
+  }
+}

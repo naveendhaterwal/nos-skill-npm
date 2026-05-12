@@ -1,0 +1,10 @@
+{
+  "name": "minimal-skill",
+  "namespace": "global",
+  "version": "1.0.0",
+  "description": "A minimal skill metadata.",
+  "author": "community",
+  "tags": ["minimal"],
+  "skillType": "app",
+  "entry": "SKILL.md"
+}

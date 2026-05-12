@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-ai-deployment-operator/execution-state",
+  "title": "Execution State Snapshot",
+  "description": "Machine-readable snapshot of current execution state, returned by the polling engine at each interval.",
+  "type": "object",
+  "required": ["job_address", "state", "polled_at"],
+  "properties": {
+    "job_address": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "validating",
+        "uploading-ipfs",
+        "submitting-transaction",
+        "queued",
+        "claimed",
+        "pulling-image",
+        "staging-resources",
+        "running",
+        "exposing",
+        "health-checking",
+        "online",
+        "stopping",
+        "completed",
+        "failed",
+        "stopped",
+        "expired",
+        "queued-timeout",
+        "cancelled",
+        "unknown"
+      ]
+    },
+    "polled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "previous_state": {
+      "type": ["string", "null"],
+      "description": "The state before this poll (for transition detection)"
+    },
+    "state_changed": {
+      "type": "boolean",
+      "description": "Whether the state changed since last poll"
+    },
+    "queue_position": {
+      "type": ["integer", "null"],
+      "description": "Position in market queue (if available)"
+    },
+    "elapsed_seconds": {
+      "type": "number",
+      "description": "Time since submission"
+    },
+    "timeout_remaining_seconds": {
+      "type": ["number", "null"],
+      "description": "Seconds remaining before job timeout"
+    },
+    "service_urls": {
+      "type": "array",
+      "items": { "type": "string", "format": "uri" },
+      "default": []
+    },
+    "node_address": {
+      "type": ["string", "null"],
+      "description": "Address of the node executing the job (once claimed)"
+    },
+    "is_terminal": {
+      "type": "boolean",
+      "description": "Whether this state is a terminal state (no further transitions)"
+    }
+  },
+  "additionalProperties": false
+}

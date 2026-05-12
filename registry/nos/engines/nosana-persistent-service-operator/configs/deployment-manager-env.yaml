@@ -1,0 +1,17 @@
+# Required environment variables for hosting the deployment-manager
+env_vars:
+  - name: NETWORK
+    description: "solana network (devnet, mainnet)"
+    required: true
+  - name: DOCDB_HOST
+    description: "MongoDB host"
+    required: true
+  - name: PINATA_JWT
+    description: "For uploading job definitions to IPFS"
+    required: true
+  - name: VAULT_KEY
+    description: "Encryption key for vault private keys in the DB"
+    required: true
+  - name: TASKS_BATCH_SIZE
+    description: "Number of tasks to process per tick (default 100)"
+    required: false

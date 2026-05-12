@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-market-analyst/cost-estimate",
+  "title": "Cost Estimate",
+  "description": "Machine-readable cost estimate for a Nosana workload. Emitted by calculate-costs.sh. Consumed by nosana-skill-composer (plan approval gate) and nosana-persistent-service-operator (vault sufficiency planning).",
+  "type": "object",
+  "required": ["schema_version", "market", "workload", "cost_estimates", "queried_at"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "market": {
+      "type": "object",
+      "required": ["slug", "job_price_nos_per_second"],
+      "properties": {
+        "slug": { "type": "string" },
+        "job_price_nos_per_second": { "type": "number" },
+        "vram_gb": { "type": ["integer", "null"] },
+        "queue_length": { "type": "integer" },
+        "active_nodes": { "type": "integer" },
+        "availability_score": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "properties": {
+        "timeout_seconds": { "type": "integer" },
+        "replicas": { "type": "integer" }
+      }
+    },
+    "cost_estimates": {
+      "type": "object",
+      "required": ["per_job_nos", "hourly_nos", "daily_nos", "monthly_nos"],
+      "properties": {
+        "per_job_nos": { "type": "number", "description": "NOS cost for a single job at this timeout" },
+        "hourly_nos": { "type": "number" },
+        "daily_nos": { "type": "number" },
+        "monthly_nos": { "type": "number" }
+      }
+    },
+    "queue_warning": { "type": ["string", "null"], "description": "Set if queue_length > active_nodes indicating potential wait time" },
+    "queried_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

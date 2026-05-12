@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-persistent-service-operator/deployment-status",
+  "title": "Deployment Status",
+  "description": "Machine-readable snapshot of a deployment's current lifecycle state. Emitted by all operations as output. Consumed by monitoring, composer, and recovery.",
+  "type": "object",
+  "required": ["status_version", "deployment_id", "status", "strategy", "timestamps"],
+  "properties": {
+    "status_version": { "type": "string", "const": "1.0.0" },
+    "deployment_id": { "type": "string" },
+    "name": { "type": ["string", "null"] },
+    "status": {
+      "type": "string",
+      "enum": ["DRAFT", "STARTING", "RUNNING", "STOPPING", "STOPPED", "ERROR", "INSUFFICIENT_FUNDS", "ARCHIVED"],
+      "description": "Current deployment-manager lifecycle state"
+    },
+    "strategy": {
+      "type": "string",
+      "enum": ["INFINITE", "SCHEDULED", "SIMPLE", "SIMPLE-EXTEND"]
+    },
+    "vault": {
+      "type": "object",
+      "properties": {
+        "address": { "type": "string" },
+        "nos_balance": { "type": ["number", "null"] },
+        "sufficient": { "type": ["boolean", "null"] },
+        "required_per_rotation": { "type": ["number", "null"] }
+      }
+    },
+    "active_revision": { "type": ["integer", "null"] },
+    "replicas": {
+      "type": "object",
+      "properties": {
+        "requested": { "type": "integer" },
+        "running": { "type": "integer" },
+        "queued": { "type": "integer" }
+      }
+    },
+    "active_job": {
+      "type": ["object", "null"],
+      "properties": {
+        "job_address": { "type": "string" },
+        "state": { "type": "string", "enum": ["QUEUED", "RUNNING", "COMPLETED", "STOPPED"] },
+        "node": { "type": ["string", "null"] },
+        "posted_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "service_urls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "op_id": { "type": "string" },
+          "port": { "type": "integer" },
+          "url": { "type": "string" }
+        }
+      }
+    },
+    "rapid_completion_count": {
+      "type": "integer",
+      "description": "Number of rapid completions detected in current window. Threshold from deployment-manager config.",
+      "default": 0
+    },
+    "error_message": { "type": ["string", "null"] },
+    "timestamps": {
+      "type": "object",
+      "properties": {
+        "created_at": { "type": "string", "format": "date-time" },
+        "started_at": { "type": ["string", "null"], "format": "date-time" },
+        "last_rotation_at": { "type": ["string", "null"], "format": "date-time" },
+        "queried_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

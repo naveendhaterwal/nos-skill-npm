@@ -1,0 +1,70 @@
+# Confidential Job Lifecycle State Machine
+# Uses P2P encryption for job definition delivery.
+# Canonical pattern from OPERATIONAL_WORKFLOWS.md
+
+states:
+  submitted:
+    description: "Job posted with --confidential flag"
+    actions:
+      - "CLI generates encryption keypair"
+      - "CLI encrypts job definition for target node"
+      - "Encrypted payload pinned to IPFS"
+      - "Post list() to Solana with encrypted CID"
+    transitions:
+      - to: queued
+        trigger: "Transaction confirmed"
+      - to: failed
+        trigger: "Encryption failure or balance insufficient"
+
+  queued:
+    description: "Encrypted job in queue — only targeted node (or any node with decryption key) can claim"
+    transitions:
+      - to: claimed
+        trigger: "Node claims and decrypts job definition"
+      - to: stopped
+        trigger: "Timeout or manual stop"
+
+  claimed:
+    description: "Node decrypted job definition and begins execution"
+    transitions:
+      - to: pulling_image
+        trigger: "TaskManager starts"
+
+  pulling_image:
+    transitions:
+      - to: executing
+        trigger: "Image pulled"
+      - to: failed
+        trigger: "Pull failure"
+
+  executing:
+    description: "Container running with decrypted secrets"
+    transitions:
+      - to: completed
+        trigger: "Exit 0"
+      - to: failed
+        trigger: "Non-zero exit"
+      - to: stopped
+        trigger: "Timeout or manual stop"
+
+  completed:
+    terminal: true
+    actions:
+      - "Results encrypted and pinned to IPFS"
+      - "Only job poster can decrypt results"
+
+  failed:
+    terminal: true
+
+  stopped:
+    terminal: true
+
+security_properties:
+  - "Job definition is encrypted end-to-end — not visible in IPFS or on-chain"
+  - "Only the job poster and the executing node can see the job definition"
+  - "Results are encrypted — only the job poster can decrypt"
+  - "Useful for proprietary models, API keys, or sensitive configurations"
+
+cli_pattern: "nosana job post --market {market} -f job.json --confidential"
+
+recovery: none

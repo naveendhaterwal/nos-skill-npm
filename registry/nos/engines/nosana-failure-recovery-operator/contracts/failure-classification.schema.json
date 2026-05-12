@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-failure-recovery-operator/failure-classification",
+  "title": "Failure Classification",
+  "description": "Structured classification of a failure incident. Produced after symptom analysis and root-cause extraction.",
+  "type": "object",
+  "required": ["failure_id", "category", "severity", "root_cause", "retry_safe", "confidence"],
+  "properties": {
+    "failure_id": {
+      "type": "string",
+      "description": "Unique taxonomy ID (e.g., GPU_OOM_001, FRP_BIND_001)"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["gpu-memory", "container-crash", "image-pull", "frp-binding", "frp-tunnel", "healthcheck", "queue-starvation", "balance-sol", "balance-nos", "ipfs", "blockchain-tx", "blockchain-rpc", "deployment-manager-funds", "deployment-manager-loop", "deployment-manager-state", "confidential-p2p", "node-runtime", "node-process", "timeout", "unknown"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["fatal", "recoverable", "degraded", "transient"]
+    },
+    "symptoms": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Observable symptoms that led to this classification"
+    },
+    "root_cause": {
+      "type": "string",
+      "description": "Determined root cause of the failure"
+    },
+    "likely_causes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ranked list of probable causes"
+    },
+    "retry_safe": {
+      "type": "boolean",
+      "description": "Whether retrying the same job with same config is safe"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Diagnostic confidence (0.0-1.0)"
+    },
+    "taxonomy_reference": {
+      "type": ["string", "null"],
+      "description": "Path to failure taxonomy entry (e.g., failure-taxonomy/execution-failures.yaml#GPU_OOM_001)"
+    }
+  },
+  "additionalProperties": false
+}

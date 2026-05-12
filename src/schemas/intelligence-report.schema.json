@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Intelligence Report",
+  "type": "object",
+  "properties": {
+    "skillId": { "type": "string" },
+    "trustScore": { "type": "number" },
+    "complexity": { "type": "string", "enum": ["simple", "moderate", "advanced", "dangerous"] },
+    "compatibility": {
+      "type": "object",
+      "properties": {
+        "cursor": { "type": "boolean" },
+        "claude": { "type": "boolean" },
+        "codex": { "type": "boolean" },
+        "windsurf": { "type": "boolean" },
+        "goose": { "type": "boolean" },
+        "antigravity": { "type": "boolean" }
+      },
+      "required": ["cursor", "claude", "codex", "windsurf", "goose", "antigravity"]
+    },
+    "safety": {
+      "type": "object",
+      "properties": {
+        "riskLevel": { "type": "string", "enum": ["safe", "low", "medium", "high", "critical"] },
+        "dangerousCommands": { "type": "array", "items": { "type": "string" } },
+        "shellExecution": { "type": "boolean" },
+        "networkExecution": { "type": "boolean" }
+      },
+      "required": ["riskLevel", "dangerousCommands", "shellExecution", "networkExecution"]
+    },
+    "quality": {
+      "type": "object",
+      "properties": {
+        "hasExamples": { "type": "boolean" },
+        "hasSchemas": { "type": "boolean" },
+        "hasTests": { "type": "boolean" },
+        "deterministicOutputs": { "type": "boolean" }
+      },
+      "required": ["hasExamples", "hasSchemas", "hasTests", "deterministicOutputs"]
+    },
+    "workflow": {
+      "type": "object",
+      "properties": {
+        "hasStateMachine": { "type": "boolean" },
+        "workflowType": { "type": "string" }
+      },
+      "required": ["hasStateMachine", "workflowType"]
+    },
+    "dependencies": { "type": "array", "items": { "type": "string" } },
+    "recommendations": { "type": "array", "items": { "type": "string" } },
+    "trustState": { "type": "string", "enum": ["structured", "compatibility", "recoverable", "unsafe", "corrupted"] }
+  },
+  "required": [
+    "skillId",
+    "trustScore",
+    "complexity",
+    "compatibility",
+    "safety",
+    "quality",
+    "workflow",
+    "dependencies",
+    "recommendations",
+    "trustState"
+  ]
+}

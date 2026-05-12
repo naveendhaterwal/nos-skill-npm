@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-ai-deployment-operator/execution-input",
+  "title": "Execution Input",
+  "description": "Input contract for the deployment operator. Consumes a deployment plan from nosana-deployment-architect or accepts a minimal direct-execution request.",
+  "type": "object",
+  "required": ["execution_mode", "job_definition", "market", "timeout_seconds"],
+  "properties": {
+    "execution_mode": {
+      "type": "string",
+      "enum": ["one-shot", "one-shot-wait", "simple-extend", "local-test", "confidential"],
+      "description": "How to execute: one-shot (fire-and-forget), one-shot-wait (block until complete), simple-extend (post + manual extend), local-test (nosana node run), confidential (P2P encrypted)"
+    },
+    "job_definition": {
+      "type": "object",
+      "required": ["version", "type", "ops"],
+      "description": "The complete Nosana job-definition.json to execute",
+      "properties": {
+        "version": { "type": "string", "const": "0.1" },
+        "type": { "type": "string", "const": "container" },
+        "meta": { "type": "object" },
+        "global": { "type": "object" },
+        "deployment_id": { "type": "string" },
+        "logistics": { "type": "object" },
+        "ops": { "type": "array", "minItems": 1 }
+      }
+    },
+    "market": {
+      "type": "string",
+      "description": "Market slug or Solana address (e.g., 'gpu-medium')"
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "minimum": 60,
+      "description": "Job timeout in seconds"
+    },
+    "network": {
+      "type": "string",
+      "enum": ["mainnet", "devnet"],
+      "default": "mainnet"
+    },
+    "confidential": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to use P2P encrypted job delivery"
+    },
+    "target_node": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Pin job to a specific node address (optional)"
+    },
+    "gpu_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "source_plan": {
+      "type": ["object", "null"],
+      "default": null,
+      "description": "Full deployment-plan.schema.json from architect (if available). Used for failure prediction context and strategy validation."
+    }
+  },
+  "additionalProperties": false
+}

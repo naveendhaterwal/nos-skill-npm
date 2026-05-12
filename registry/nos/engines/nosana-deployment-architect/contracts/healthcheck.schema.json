@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-deployment-architect/healthcheck",
+  "title": "Healthcheck Configuration",
+  "description": "Runtime-aware health semantics for a Nosana deployment. Accounts for model loading time, retry behavior, and degradation thresholds.",
+  "type": "object",
+  "required": ["enabled"],
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether health checks should be configured for this deployment"
+    },
+    "endpoint": {
+      "type": "object",
+      "required": ["path", "method", "expected_status"],
+      "properties": {
+        "path": { "type": "string", "description": "HTTP path to probe (e.g., '/v1/chat/completions')" },
+        "method": { "type": "string", "enum": ["GET", "POST"], "description": "HTTP method for the probe" },
+        "body": { "type": ["string", "null"], "description": "Request body for POST probes (JSON string)" },
+        "headers": { "type": "object", "description": "HTTP headers for the probe request" },
+        "expected_status": { "type": "integer", "description": "Expected HTTP status code (typically 200)" }
+      }
+    },
+    "timing": {
+      "type": "object",
+      "required": ["startup_grace_period_seconds"],
+      "properties": {
+        "startup_grace_period_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How long to wait before the first health check (accounts for model loading time)"
+        },
+        "retry_interval_seconds": {
+          "type": "integer",
+          "minimum": 5,
+          "default": 15,
+          "description": "Seconds between health check retries"
+        },
+        "max_startup_wait_seconds": {
+          "type": "integer",
+          "default": 600,
+          "description": "Maximum time to wait for the service to become healthy before marking as failed"
+        }
+      }
+    },
+    "continuous": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to keep checking after initial success (true for production load balancing)"
+    },
+    "degradation": {
+      "type": "object",
+      "properties": {
+        "max_consecutive_failures": {
+          "type": "integer",
+          "default": 3,
+          "description": "Number of consecutive failures before marking service as degraded"
+        },
+        "recovery_action": {
+          "type": "string",
+          "enum": ["restart-container", "rotate-job", "alert-only", "none"],
+          "default": "alert-only",
+          "description": "What to do when degradation threshold is breached"
+        }
+      }
+    },
+    "grace_period_reasoning": {
+      "type": "string",
+      "description": "Why this grace period was chosen (e.g., '7B FP16 model typically loads in 60-120s on RTX 4090')"
+    }
+  },
+  "additionalProperties": false
+}

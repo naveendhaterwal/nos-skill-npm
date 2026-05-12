@@ -1,0 +1,17 @@
+strategies:
+  INFINITE:
+    description: "Maintains a target number of running replicas indefinitely."
+    default_rotation_time: 300 # seconds before timeout to start replacement
+    requires_schedule: false
+    auto_recover: true
+
+  SCHEDULED:
+    description: "Runs a job based on a cron expression."
+    default_rotation_time: 0
+    requires_schedule: true
+    auto_recover: false # If it fails, it waits for the next cron tick
+
+limits:
+  max_replicas: 10
+  min_timeout: 60
+  max_timeout: 86400 # 24 hours (provider limits may vary)

@@ -1,0 +1,120 @@
+# Persistent Service Deployment Lifecycle State Machine
+# Models the canonical deployment-manager status transitions from DEPLOYMENT_MANAGER.md.
+# See: data model DeploymentStatus enum.
+
+states:
+
+  DRAFT:
+    description: "Deployment created but not yet started. Vault address assigned, awaiting funding."
+    entry_actions:
+      - "Validate deployment-request.schema.json"
+      - "Call POST /deployments"
+      - "Extract deployment_id and vault address from response"
+      - "Emit deployment-status.schema.json with status: DRAFT"
+    transitions:
+      - to: STARTING
+        trigger: "POST /deployments/:id/start called AND vault sufficiently funded"
+      - to: INSUFFICIENT_FUNDS
+        trigger: "POST /deployments/:id/start called BUT vault balance < job cost"
+      - to: ARCHIVED
+        trigger: "DELETE /deployments/:id called"
+
+  STARTING:
+    description: "Deployment start triggered. Deployment-manager posting first job to blockchain."
+    entry_actions:
+      - "Deployment-manager executes LIST task via worker thread"
+      - "Job posted to Solana via nosana-kit SDK"
+      - "MongoDB updated with new job document"
+    transitions:
+      - to: RUNNING
+        trigger: "First job confirmed on blockchain AND job state → QUEUED or RUNNING"
+      - to: ERROR
+        trigger: "LIST task fails after retries (blockchain error, IPFS failure)"
+      - to: INSUFFICIENT_FUNDS
+        trigger: "Vault balance drops below job cost during posting"
+
+  RUNNING:
+    description: "Active deployment with at least one running job replica."
+    entry_actions:
+      - "Emit deployment-status.schema.json with status: RUNNING"
+      - "Monitor replica count vs target"
+      - "Track rapid_completion_count in current window"
+    internal_triggers:
+      - trigger: "INFINITE: job state → RUNNING"
+        action: "Schedule LIST task at (timeout - rotation_offset_seconds)"
+      - trigger: "INFINITE: job state → COMPLETED or STOPPED before rotation time"
+        action: "Check rapid_completion_count. If below threshold: re-post immediately. If above threshold: flag RUNNING-DEGRADED."
+      - trigger: "SCHEDULED: cron expression fires"
+        action: "Execute LIST task for new job"
+      - trigger: "Replica count < target"
+        action: "Schedule LIST task to restore replica count"
+    transitions:
+      - to: STOPPING
+        trigger: "POST /deployments/:id/stop called"
+      - to: INSUFFICIENT_FUNDS
+        trigger: "Vault balance below job cost at rotation time"
+      - to: ERROR
+        trigger: "deployment-manager internal error"
+      - to: RUNNING
+        trigger: "Normal rotation: new job posted, old job stopped"
+
+  STOPPING:
+    description: "Stop requested. Deployment-manager executing STOP tasks for all running jobs."
+    entry_actions:
+      - "Deployment-manager schedules STOP task for each running job"
+      - "No new LIST tasks scheduled"
+    transitions:
+      - to: STOPPED
+        trigger: "All running jobs transitioned to STOPPED state"
+      - to: ERROR
+        trigger: "STOP task fails after retries"
+
+  STOPPED:
+    description: "No running jobs. Can be restarted or archived."
+    transitions:
+      - to: STARTING
+        trigger: "POST /deployments/:id/start called"
+      - to: ARCHIVED
+        trigger: "DELETE /deployments/:id called"
+
+  INSUFFICIENT_FUNDS:
+    description: "Vault NOS balance below required threshold. Deployment paused. Auto-resumes on replenishment."
+    entry_actions:
+      - "Emit vault-status.schema.json with sufficient: false and shortfall amount"
+      - "NO new LIST tasks scheduled until replenished"
+    recovery_note: >
+      This skill routes INSUFFICIENT_FUNDS to nosana-failure-recovery-operator with
+      category: deployment-manager-funds (DM_FUNDS_001). Recovery operator classifies
+      and emits remediation plan. This skill executes the vault-replenish action.
+    transitions:
+      - to: RUNNING
+        trigger: "Periodic vault balance check detects sufficient NOS added"
+      - to: STOPPED
+        trigger: "POST /deployments/:id/stop called while in INSUFFICIENT_FUNDS"
+
+  ERROR:
+    description: "Unrecoverable internal deployment-manager error."
+    entry_actions:
+      - "Emit deployment-status.schema.json with status: ERROR and error_message"
+      - "Route to nosana-failure-recovery-operator via incident-input contract"
+    transitions:
+      - to: STOPPED
+        trigger: "Human/operator intervention resolves underlying issue"
+
+  ARCHIVED:
+    terminal: true
+    description: "Deployment permanently removed. Vault drained. No recovery."
+
+# RAPID COMPLETION DEGRADED BEHAVIOR (RUNNING sub-state)
+# When rapid_completion_count >= rapid_completion_job_count threshold:
+# - Deployment-manager continues posting (does NOT auto-stop)
+# - This operator MUST detect via GET /deployments/:id/events
+# - Route to nosana-failure-recovery-operator with category: deployment-manager-loop (DM_RAPID_LOOP_001)
+# - Recovery operator will instruct: stop → fix → patch-revision → restart
+
+terminal_states: ["ARCHIVED"]
+
+# OPERATIONAL BOUNDARY
+# This state machine ONLY models the deployment-manager lifecycle.
+# This skill NEVER models the individual job states (QUEUED/RUNNING/COMPLETED/STOPPED).
+# Individual job state transitions are owned by nosana-ai-deployment-operator.

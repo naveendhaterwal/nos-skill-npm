@@ -1,0 +1,190 @@
+# Standard Execution State Machine
+# Strategy: SIMPLE / one-shot / one-shot-wait
+# This is the canonical lifecycle the operator tracks during execution.
+# Derived from EXECUTION_ENGINE.md OperationProgressStatuses + CLI_REFERENCE.md
+
+states:
+  # === PRE-SUBMISSION STATES (operator-internal) ===
+
+  validating:
+    description: "Operator is validating pre-flight conditions"
+    internal: true
+    actions:
+      - "Verify job-definition.json file exists and is valid JSON"
+      - "Run nosana job validate -f job.json"
+      - "Check SOL balance >= 0.005 (solana balance)"
+      - "Check NOS balance >= (jobPrice × timeout / 1_000_000)"
+      - "Verify PINATA_JWT is set"
+      - "Verify market slug or address is valid"
+    transitions:
+      - to: uploading-ipfs
+        trigger: "All validation checks pass"
+      - to: failed-pre-submission
+        trigger: "Any validation check fails"
+    output: "validation_result JSON"
+
+  uploading-ipfs:
+    description: "CLI is pinning job-definition.json to IPFS via Pinata"
+    internal: true
+    observable_cli_output: "Uploading to IPFS..."
+    transitions:
+      - to: submitting-transaction
+        trigger: "IPFS CID returned successfully"
+      - to: failed-pre-submission
+        trigger: "IPFS upload fails (Pinata auth error, rate limit, network error)"
+    timeout: 30
+    failure_type: "ipfs-upload-failed"
+
+  submitting-transaction:
+    description: "CLI is submitting the list() transaction to Solana"
+    internal: true
+    observable_cli_output: "Submitting to Solana..."
+    transitions:
+      - to: queued
+        trigger: "Transaction confirmed on-chain, job address returned"
+      - to: failed-pre-submission
+        trigger: "Transaction simulation failed (SOL/NOS insufficient, RPC error)"
+    timeout: 30
+    failure_types:
+      - "transaction-simulation-failed"
+      - "sol-balance-insufficient"
+      - "nos-balance-insufficient"
+
+  # === PRE-SUBMISSION TERMINAL ===
+
+  failed-pre-submission:
+    description: "Execution failed before reaching the blockchain"
+    terminal: true
+    receipt_state: "failed"
+    action: "Emit failure-report.schema.json with appropriate failure_type"
+
+  # === ON-CHAIN STATES (polled from nosana job get) ===
+
+  queued:
+    description: "Job is on-chain and waiting for a node to claim it"
+    polled: true
+    poll_interval_seconds: 5
+    transitions:
+      - to: claimed
+        trigger: "Job status changes from QUEUED to RUNNING (node executed work())"
+      - to: queued-timeout
+        trigger: "Queue wait exceeds max_queue_wait_seconds"
+      - to: stopped
+        trigger: "User or operator sends 'nosana job stop'"
+    timeout:
+      max_seconds: 600
+      on_timeout: "queued-timeout"
+    observable_fields:
+      - "state: QUEUED"
+      - "market"
+      - "timeout"
+
+  claimed:
+    description: "Node has claimed the job — image pull starting"
+    polled: true
+    poll_interval_seconds: 5
+    transitions:
+      - to: running
+        trigger: "Operation status changes to 'running'"
+      - to: failed
+        trigger: "Node crashes during initialization"
+    observable_fields:
+      - "node address"
+      - "run address"
+
+  running:
+    description: "Container is executing the workload"
+    polled: true
+    poll_interval_seconds: 10
+    sub_states:
+      pulling-image:
+        observable: "operation progress = 'starting'"
+      staging-resources:
+        observable: "S3 helper container running"
+      executing:
+        observable: "main container running"
+      exposing:
+        observable: "FRP tunnel being established"
+      online:
+        observable: "Service URL available in endpoints"
+    transitions:
+      - to: completed
+        trigger: "Container exits with code 0 (one-shot) OR timeout expires (service)"
+      - to: failed
+        trigger: "Container exits non-zero, OOM kill, or unexpected error"
+      - to: stopped
+        trigger: "User stops job or timeout expires normally"
+      - to: expired
+        trigger: "Timeout reached without extend"
+    observable_fields:
+      - "operation progress status"
+      - "container logs (stdout/stderr)"
+      - "endpoints (if exposed)"
+      - "elapsed time"
+
+  # === TERMINAL STATES ===
+
+  completed:
+    description: "Job finished successfully — results pinned to IPFS"
+    terminal: true
+    receipt_state: "completed"
+    actions:
+      - "Capture result IPFS CID"
+      - "Extract service URLs from endpoints"
+      - "Calculate total execution duration"
+      - "Emit execution-receipt.schema.json"
+
+  failed:
+    description: "Job failed during execution"
+    terminal: true
+    receipt_state: "failed"
+    actions:
+      - "Classify failure type from CLI output / logs"
+      - "Capture log tail (last 50 lines)"
+      - "Emit failure-report.schema.json"
+      - "Route to nosana-failure-recovery-operator"
+
+  stopped:
+    description: "Job stopped by user or timeout"
+    terminal: true
+    receipt_state: "stopped"
+    stop_reasons: ["user-stopped", "timeout-expired", "operator-cancelled"]
+
+  expired:
+    description: "Job timeout expired — service was terminated"
+    terminal: true
+    receipt_state: "expired"
+    notes: "For SIMPLE strategy, this is the natural end of a service deployment"
+
+  queued-timeout:
+    description: "No node claimed the job within the queue wait limit"
+    terminal: true
+    receipt_state: "queued-timeout"
+    actions:
+      - "Emit failure-report with type: queue-timeout"
+      - "Route to recovery operator"
+
+  cancelled:
+    description: "Operator or user cancelled before submission completed"
+    terminal: true
+    receipt_state: "cancelled"
+
+# State detection rules (for parsing nosana job get output)
+state_detection:
+  - cli_output_contains: "QUEUED"
+    maps_to: "queued"
+  - cli_output_contains: "RUNNING"
+    maps_to: "running"
+  - cli_output_contains: "COMPLETED"
+    maps_to: "completed"
+  - cli_output_contains: "STOPPED"
+    maps_to: "stopped"
+  - cli_field: "state"
+    value: "CREATED"
+    maps_to: "queued"
+  - cli_field: "state"
+    value: "RUNNING"
+    maps_to: "running"
+
+# Terminal state set (for polling exit)
+terminal_states: ["completed", "failed", "stopped", "expired", "queued-timeout", "cancelled", "failed-pre-submission"]

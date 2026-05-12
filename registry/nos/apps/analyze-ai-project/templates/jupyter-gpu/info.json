@@ -1,0 +1,80 @@
+{
+  "id": "jupyter-gpu",
+  "name": "GPU-Enabled Jupyter Notebook (Axolotl/PyTorch)",
+  "category": ["training", "fine-tuning", "development-environment"],
+  "framework": "axolotl",
+  "description": "Jupyter notebook environment pre-loaded with Axolotl for LLM fine-tuning, LoRA training, and general GPU-accelerated development.",
+
+  "container": {
+    "image": "docker.io/winglian/axolotl-cloud:main-20250221",
+    "default_port": 8888,
+    "bind_address": "0.0.0.0",
+    "gpu_required": true
+  },
+
+  "vram_profiles": {
+    "lora-7b": { "required_vram_gb": 8, "notes": "LoRA fine-tuning of 7B model" },
+    "full-7b": { "required_vram_gb": 16, "notes": "Full fine-tuning of 7B model" },
+    "lora-13b": { "required_vram_gb": 16, "notes": "LoRA fine-tuning of 13B model" },
+    "development": { "required_vram_gb": 4, "notes": "General GPU development without large models" }
+  },
+
+  "deployment_compatibility": {
+    "supports_one_shot": true,
+    "supports_persistent": true,
+    "supports_infinite": true,
+    "supports_scheduled": false,
+    "supports_confidential": true,
+    "recommended_strategy": "SIMPLE-EXTEND",
+    "recommended_operator": "nosana-ai-deployment-operator"
+  },
+
+  "healthcheck": {
+    "required": false,
+    "reason": "Jupyter serves its UI immediately on startup. No model loading delay.",
+    "simple_expose": true
+  },
+
+  "startup_behavior": {
+    "description": "Jupyter server starts immediately. User interacts via browser. Training happens on-demand inside notebook cells.",
+    "typical_startup_seconds": { "default": 15 },
+    "blocks_until_ready": false,
+    "nosana_cdn_recommended": false
+  },
+
+  "common_failures": [
+    {
+      "type": "oom",
+      "description": "Training job inside notebook exceeds VRAM",
+      "mitigation": "Use gradient checkpointing, reduce batch size, or use LoRA instead of full fine-tuning"
+    },
+    {
+      "type": "timeout-exhaustion",
+      "description": "Training runs can take hours; default timeout too short",
+      "mitigation": "Set timeout >= 7200s or use SIMPLE-EXTEND strategy"
+    }
+  ],
+
+  "interpolation_variables": {},
+
+  "security_warnings": [
+    "Default template disables Jupyter authentication (--ServerApp.token='' --ServerApp.password=''). For production, set a token via Nosana secrets: [\"nosana/jupyter-token\"]"
+  ],
+
+  "market_constraints": {
+    "minimum_market": "gpu-micro",
+    "recommended_market_by_size": {
+      "development": "gpu-micro",
+      "lora-7b": "gpu-small",
+      "full-7b": "gpu-medium",
+      "lora-13b": "gpu-medium"
+    }
+  },
+
+  "timeout_characteristics": {
+    "minimum_viable_timeout_seconds": 1800,
+    "recommended_timeout_seconds": 7200,
+    "infinite_deployment_recommended": false,
+    "timeout_reason": "Training sessions have defined duration; SIMPLE-EXTEND is sufficient"
+  }
+}

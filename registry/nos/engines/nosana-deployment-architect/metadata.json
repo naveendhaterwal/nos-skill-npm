@@ -1,0 +1,16 @@
+{
+  "name": "nosana-deployment-architect",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Operational engine skill for Nosana infrastructure.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "engine",
+    "infrastructure"
+  ],
+  "skillType": "engine",
+  "trustLevel": "verified",
+  "entry": "SKILL.md"
+}

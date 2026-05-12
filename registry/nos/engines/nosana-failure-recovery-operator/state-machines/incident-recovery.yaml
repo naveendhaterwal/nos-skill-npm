@@ -1,0 +1,157 @@
+# Incident Recovery State Machine
+# The canonical lifecycle for every failure incident handled by this operator.
+
+states:
+
+  detecting:
+    description: "Incident received from upstream operator, user, or monitoring"
+    entry_actions:
+      - "Accept incident-input.schema.json"
+      - "Record incident_detected_at timestamp"
+      - "Assign incident_id"
+    transitions:
+      - to: classifying
+        trigger: "Incident input validated"
+      - to: fatal
+        trigger: "Incident input is malformed or empty"
+
+  classifying:
+    description: "Pattern-matching symptoms against failure-taxonomy to identify failure type"
+    actions:
+      - "Extract symptoms from error_output, logs, CLI output"
+      - "Match against failure-taxonomy/*.yaml entries"
+      - "Determine failure_id, category, severity"
+      - "Calculate diagnostic confidence (0.0-1.0)"
+    transitions:
+      - to: extracting-context
+        trigger: "Classification complete with confidence >= 0.5"
+      - to: extracting-context
+        trigger: "Classification complete with confidence < 0.5 (mark as 'unknown')"
+    output: "contracts/failure-classification.schema.json"
+
+  extracting-context:
+    description: "Gathering additional diagnostic context to confirm root cause"
+    actions:
+      - "Retrieve job status: nosana job get <job-address>"
+      - "Extract container logs if available"
+      - "Check IPFS definition if CID available"
+      - "Inspect service URL if FRP failure"
+      - "Check deployment events if deployment-manager failure"
+    transitions:
+      - to: determining-root-cause
+        trigger: "Context extraction complete"
+      - to: determining-root-cause
+        trigger: "Context extraction partial (some data unavailable)"
+
+  determining-root-cause:
+    description: "Confirming root cause from classified symptoms + extracted context"
+    actions:
+      - "Cross-reference symptoms with taxonomy likely_causes"
+      - "Run diagnostic script if available (diagnostics/*.sh)"
+      - "Validate hypothesis against job definition and context"
+    transitions:
+      - to: selecting-remediation
+        trigger: "Root cause confirmed"
+      - to: escalated
+        trigger: "Root cause unclear after diagnostics — confidence < 0.3"
+
+  selecting-remediation:
+    description: "Choosing recovery strategy based on failure type and severity"
+    logic: |
+      if severity == "transient" and retry_safe:
+        strategy = "retry-same"
+      elif severity == "recoverable" and retry_with_modification:
+        strategy = "retry-modified"
+      elif requires_user_action:
+        strategy = "manual-intervention"
+      elif recommended_operator != "self":
+        strategy = "reroute-operator"
+      else:
+        strategy = "escalate"
+    transitions:
+      - to: executing-remediation
+        trigger: "Strategy selected and retry_safe confirmed"
+      - to: escalated
+        trigger: "No safe remediation available"
+      - to: pending-user-action
+        trigger: "Strategy requires user intervention (balance, credentials)"
+    output: "contracts/remediation-plan.schema.json"
+
+  executing-remediation:
+    description: "Executing the selected recovery actions"
+    actions:
+      - "Apply config modifications (if retry-modified)"
+      - "Route to target operator with handoff data"
+      - "Track retry count against max_retries"
+    transitions:
+      - to: verifying-recovery
+        trigger: "Remediation actions completed"
+      - to: retrying
+        trigger: "First attempt failed, retries remaining"
+      - to: escalated
+        trigger: "Max retries exceeded"
+
+  retrying:
+    description: "Waiting before retry with optional backoff"
+    constraints:
+      max_retries: "From taxonomy entry (typically 1-3)"
+      backoff: "Exponential: 5s, 10s, 20s"
+    transitions:
+      - to: executing-remediation
+        trigger: "Backoff period elapsed"
+      - to: escalated
+        trigger: "Max retries exceeded"
+
+  verifying-recovery:
+    description: "Confirming the recovery succeeded"
+    actions:
+      - "Check new job status (if re-posted)"
+      - "Verify service URL (if FRP failure)"
+      - "Confirm deployment status (if deployment-manager)"
+    transitions:
+      - to: recovered
+        trigger: "Verification confirms recovery successful"
+      - to: degraded
+        trigger: "Partial recovery — service functional but not optimal"
+      - to: retrying
+        trigger: "Verification failed, retries remaining"
+      - to: escalated
+        trigger: "Verification failed, no retries remaining"
+
+  # === TERMINAL STATES ===
+
+  recovered:
+    terminal: true
+    description: "Incident resolved successfully"
+    actions:
+      - "Emit recovery-result.schema.json with outcome: recovered"
+      - "Record resolution timeline"
+
+  degraded:
+    terminal: true
+    description: "Partial recovery — system functional but not at full capacity"
+    actions:
+      - "Emit recovery-result.schema.json with outcome: degraded"
+      - "Warn about remaining issues"
+
+  escalated:
+    terminal: true
+    description: "Recovery failed — requires human intervention or different operator"
+    actions:
+      - "Emit recovery-result.schema.json with outcome: escalated"
+      - "Include full diagnostic context for human review"
+
+  fatal:
+    terminal: true
+    description: "Unrecoverable failure — cannot proceed"
+    actions:
+      - "Emit recovery-result.schema.json with outcome: fatal"
+
+  pending-user-action:
+    terminal: true
+    description: "Recovery requires user to perform an action (add funds, fix credentials)"
+    actions:
+      - "Emit recovery-result.schema.json with outcome: pending-user-action"
+      - "Provide exact instructions for user"
+
+terminal_states: ["recovered", "degraded", "escalated", "fatal", "pending-user-action"]

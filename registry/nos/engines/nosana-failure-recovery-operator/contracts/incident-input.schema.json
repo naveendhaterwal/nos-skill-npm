@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-failure-recovery-operator/incident-input",
+  "title": "Incident Input",
+  "description": "Input contract for the recovery operator. Consumes failure-report from ai-deployment-operator, or accepts direct incident reports from users/agents.",
+  "type": "object",
+  "required": ["incident_source", "failure_domain"],
+  "properties": {
+    "incident_source": {
+      "type": "string",
+      "enum": ["failure-report", "user-report", "deployment-manager-event", "monitoring-alert"],
+      "description": "How this incident was detected"
+    },
+    "failure_domain": {
+      "type": "string",
+      "enum": ["posting", "execution", "queue", "frp", "healthcheck", "deployment-manager", "node", "confidential", "blockchain", "runtime"],
+      "description": "Which failure domain this incident belongs to"
+    },
+    "failure_report": {
+      "type": ["object", "null"],
+      "description": "Full failure-report.schema.json from ai-deployment-operator (if available)"
+    },
+    "job_address": {
+      "type": ["string", "null"],
+      "description": "Solana job address (if applicable)"
+    },
+    "deployment_id": {
+      "type": ["string", "null"],
+      "description": "Deployment manager deployment ID (if applicable)"
+    },
+    "node_address": {
+      "type": ["string", "null"],
+      "description": "Node Solana address (if node failure)"
+    },
+    "error_output": {
+      "type": ["string", "null"],
+      "description": "Raw CLI error output or log text"
+    },
+    "service_url": {
+      "type": ["string", "null"],
+      "description": "Service URL if FRP/healthcheck failure"
+    },
+    "job_definition": {
+      "type": ["object", "null"],
+      "description": "Job definition JSON for context (if available)"
+    },
+    "market": {
+      "type": ["string", "null"]
+    },
+    "network": {
+      "type": "string",
+      "enum": ["mainnet", "devnet"],
+      "default": "mainnet"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

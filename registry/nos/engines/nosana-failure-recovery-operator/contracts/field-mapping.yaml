@@ -1,0 +1,133 @@
+# Cross-Skill Contract Field Mapping
+# Maps failure-report.schema.json (producer: nosana-ai-deployment-operator)
+# → incident-input.schema.json (consumer: nosana-failure-recovery-operator)
+#
+# This file is the authoritative translation layer between the two contracts.
+# Any agent composing an incident-input from a failure-report MUST use this mapping.
+
+version: "1.0.0"
+
+mapping:
+  source_schema: "nosana-ai-deployment-operator/contracts/failure-report.schema.json"
+  target_schema: "nosana-failure-recovery-operator/contracts/incident-input.schema.json"
+
+field_map:
+
+  - source: "job_address"
+    target: "job_address"
+    transform: none
+
+  - source: "(constant)"
+    target: "incident_source"
+    transform: "hardcode"
+    value: "failure-report"
+
+  - source: "failure_type"
+    target: "failure_domain"
+    transform: "enum-map"
+    enum_map:
+      ipfs-upload-failed:          "posting"
+      sol-balance-insufficient:    "blockchain"
+      nos-balance-insufficient:    "blockchain"
+      transaction-simulation-failed: "posting"
+      transaction-timeout:         "posting"
+      queue-timeout:               "queue"
+      image-pull-failed:           "execution"
+      container-oom:               "execution"
+      container-crash:             "execution"
+      container-nonzero-exit:      "execution"
+      frp-exposure-failed:         "frp"
+      healthcheck-timeout:         "healthcheck"
+      timeout-expired:             "execution"
+      node-disconnected:           "node"
+      unknown:                     "execution"
+
+  - source: "(self)"
+    target: "failure_report"
+    transform: "embed-whole-object"
+    description: "Embed the entire failure-report object inside incident-input.failure_report"
+
+  - source: "error_message"
+    target: "error_output"
+    transform: none
+
+  - source: "error_context.market"
+    target: "market"
+    transform: none
+
+  - source: "(runtime)"
+    target: "network"
+    transform: "from-environment"
+    env_var: "NOSANA_NETWORK"
+    default: "mainnet"
+
+  - source: "(runtime)"
+    target: "timestamp"
+    transform: "current-iso8601"
+
+  - source: "(null)"
+    target: "deployment_id"
+    value: null
+    note: "deployment_id is only populated for deployment-manager incidents (source: deployment-manager-event)"
+
+  - source: "(null)"
+    target: "node_address"
+    value: null
+    note: "node_address only populated for node-level incidents"
+
+  - source: "(null)"
+    target: "service_url"
+    value: null
+    note: "service_url populated only for frp/healthcheck failures — extract from job's expose config"
+
+  - source: "(null)"
+    target: "job_definition"
+    value: null
+    note: "Pass job_definition if available in operator context for richer classification"
+
+# ============================================================
+# REVERSE MAPPING: remediation-plan → operator action
+# Maps nosana-failure-recovery-operator/contracts/remediation-plan.schema.json
+# back to the consuming operator's expected input format
+# ============================================================
+
+reverse_mapping:
+  source_schema: "nosana-failure-recovery-operator/contracts/remediation-plan.schema.json"
+  consumers:
+
+    - target_operator: "nosana-ai-deployment-operator"
+      trigger: "operator_routing.target_operator == 'nosana-ai-deployment-operator'"
+      action_map:
+        retry-same:
+          instruction: "Re-invoke ai-deployment-operator with the original execution-input.schema.json"
+          modified_fields: []
+        retry-modified:
+          instruction: "Re-invoke ai-deployment-operator with execution-input.schema.json patched using actions[].config_change"
+          modified_fields: "actions[].config_change"
+        reroute-market:
+          instruction: "Re-invoke ai-deployment-operator with execution-input.market updated to operator_routing.handoff_data.new_market"
+          modified_fields: ["execution_input.market"]
+        manual-intervention:
+          instruction: "Pause. Present remediation-plan.actions[] to user. Wait for resolution."
+        escalate:
+          instruction: "Emit orchestration-result with terminal_state: failed. Include failure_id."
+        abandon:
+          instruction: "Emit execution-receipt with final_state: failed. Do not retry."
+
+    - target_operator: "nosana-persistent-service-operator"
+      trigger: "operator_routing.target_operator == 'nosana-persistent-service-operator'"
+      action_map:
+        retry-same:
+          instruction: "Re-invoke persistent-service-operator with operation: start and original deployment_id"
+        add-funds:
+          instruction: "Present vault address and shortfall_nos to user. Poll vault-status until sufficient=true. Then: operation: start"
+          data_field: "operator_routing.handoff_data.vault_address"
+        stop-deployment:
+          instruction: "Invoke persistent-service-operator with operation: stop, then await user action"
+        patch-revision:
+          instruction: "Invoke persistent-service-operator with operation: update-revision using operator_routing.handoff_data.new_job_definition"
+          data_field: "operator_routing.handoff_data.new_job_definition"
+        manual-intervention:
+          instruction: "Pause. Present remediation-plan.actions[] to user."
+        escalate:
+          instruction: "Emit orchestration-result with terminal_state: failed."

@@ -1,0 +1,16 @@
+networks:
+  mainnet:
+    rpc: "https://api.mainnet-beta.solana.com"
+    api: "https://api.nosana.io"
+    ipfs_gateway: "https://nosana.mypinata.cloud/ipfs/"
+    nos_mint: "nosXBqw2ze8YtJqP8K317Pof8P5uR9UaW3aZ4CjYcTj"
+  
+  devnet:
+    rpc: "https://api.devnet.solana.com"
+    api: "https://api.devnet.nosana.io"
+    ipfs_gateway: "https://nosana.mypinata.cloud/ipfs/"
+    nos_mint: "nosXBqw2ze8YtJqP8K317Pof8P5uR9UaW3aZ4CjYcTj"
+
+defaults:
+  timeout: 3600 # 1 hour
+  provider: "podman" # alternative: "docker"

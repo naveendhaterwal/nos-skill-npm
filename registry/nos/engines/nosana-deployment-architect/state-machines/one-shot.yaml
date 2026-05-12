@@ -1,0 +1,102 @@
+# One-Shot Job Lifecycle State Machine
+# Strategy: SIMPLE
+# Operator: nosana-ai-deployment-operator
+# Path: CLI → Blockchain → Node → Container → Result → IPFS
+
+# Canonical states derived from EXECUTION_ENGINE.md OperationProgressStatuses
+# and CLI_REFERENCE.md execution flow
+
+states:
+  submitted:
+    description: "Job definition pinned to IPFS, transaction submitted to Solana"
+    entry_actions:
+      - "nosana job post --market {market} -f job.json"
+      - "CLI validates job definition schema"
+      - "CLI checks SOL balance >= 0.005"
+      - "CLI checks NOS balance >= (jobPrice / 1_000_000) × timeout"
+      - "CLI pins job definition to IPFS → CID"
+      - "CLI submits list() transaction to Solana"
+    transitions:
+      - to: queued
+        trigger: "Transaction confirmed on Solana"
+      - to: failed
+        trigger: "SOL/NOS insufficient OR schema validation error"
+
+  queued:
+    description: "Job is in market queue waiting for a node to claim it"
+    transitions:
+      - to: claimed
+        trigger: "Node executes work() instruction"
+      - to: stopped
+        trigger: "User runs 'nosana job stop' OR timeout expires before claim"
+    timeout_behavior: "Job times out if no node claims it within timeout period"
+
+  claimed:
+    description: "Node has claimed the job and is initializing"
+    transitions:
+      - to: pulling_image
+        trigger: "Node's TaskManager begins execution"
+      - to: failed
+        trigger: "Node crashes during initialization"
+
+  pulling_image:
+    description: "Container runtime pulling the Docker/Podman image"
+    operation_status: "starting"
+    transitions:
+      - to: staging_resources
+        trigger: "Image pull complete AND resources defined"
+      - to: executing
+        trigger: "Image pull complete AND no resources defined"
+      - to: failed
+        trigger: "Image pull failure (registry unreachable, image not found)"
+
+  staging_resources:
+    description: "Downloading model weights via S3 helper container"
+    transitions:
+      - to: executing
+        trigger: "All resources downloaded successfully"
+      - to: failed
+        trigger: "Download failure (S3 URL invalid, disk full)"
+
+  executing:
+    description: "Container is running the workload"
+    operation_status: "running"
+    transitions:
+      - to: completed
+        trigger: "Container exits with code 0"
+      - to: failed
+        trigger: "Container exits with non-zero code OR OOM kill"
+      - to: stopped
+        trigger: "User stops job OR timeout expires"
+
+  completed:
+    description: "Job finished successfully — results pinned to IPFS"
+    operation_status: "finished"
+    terminal: true
+    actions:
+      - "Stop all containers"
+      - "Pin results to IPFS"
+      - "Submit finish() transaction to Solana"
+
+  failed:
+    description: "Job failed — error captured in logs"
+    operation_status: "failed"
+    terminal: true
+    actions:
+      - "Stop all containers"
+      - "Pin error results to IPFS"
+      - "Submit finish() transaction with failure status"
+
+  stopped:
+    description: "Job manually stopped by user or expired"
+    operation_status: "stopped"
+    terminal: true
+    stop_reasons:
+      - "completed"
+      - "expired"
+      - "stopped"
+      - "quit"
+      - "unknown"
+
+# No recovery path — one-shot jobs do not restart
+recovery: none

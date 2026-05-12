@@ -1,0 +1,43 @@
+fp16:
+  7b:
+    params: 7_000_000_000
+    vram_model: 14GB
+    vram_context: 2GB
+    vram_total: 16GB
+  14b:
+    params: 14_000_000_000
+    vram_model: 28GB
+    vram_context: 4GB
+    vram_total: 32GB
+  32b:
+    params: 32_000_000_000
+    vram_model: 64GB
+    vram_context: 8GB
+    vram_total: 72GB
+  70b:
+    params: 70_000_000_000
+    vram_model: 140GB
+    vram_context: 16GB
+    vram_total: 156GB
+
+quantized_4bit:
+  7b:
+    params: 7_000_000_000
+    vram_model: 5GB
+    vram_context: 2GB
+    vram_total: 7GB
+  14b:
+    params: 14_000_000_000
+    vram_model: 10GB
+    vram_context: 4GB
+    vram_total: 14GB
+  32b:
+    params: 32_000_000_000
+    vram_model: 22GB
+    vram_context: 8GB
+    vram_total: 30GB
+  70b:
+    params: 70_000_000_000
+    vram_model: 48GB
+    vram_context: 16GB
+    vram_total: 64GB

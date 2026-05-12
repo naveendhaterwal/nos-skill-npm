@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-failure-recovery-operator/remediation-plan",
+  "title": "Remediation Plan",
+  "description": "Deterministic recovery plan produced after failure classification. Contains ordered recovery actions and operator routing.",
+  "type": "object",
+  "required": ["plan_version", "failure_id", "strategy", "actions", "operator_routing"],
+  "properties": {
+    "plan_version": { "type": "string", "const": "1.0.0" },
+    "failure_id": { "type": "string" },
+    "strategy": {
+      "type": "string",
+      "enum": ["retry-same", "retry-modified", "reroute-market", "reroute-operator", "manual-intervention", "escalate", "abandon"],
+      "description": "High-level recovery strategy"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "action_type", "description"],
+        "properties": {
+          "step": { "type": "integer" },
+          "action_type": {
+            "type": "string",
+            "enum": ["modify-config", "change-market", "add-funds", "fix-binding", "fix-healthcheck", "reduce-model-size", "enable-quantization", "increase-timeout", "restart-service", "fix-runtime", "fix-credentials", "retry-post", "stop-deployment", "patch-revision", "local-test", "manual"]
+          },
+          "description": { "type": "string" },
+          "cli_command": { "type": ["string", "null"] },
+          "config_change": {
+            "type": ["object", "null"],
+            "description": "Structured config diff (field → new value)"
+          },
+          "automated": { "type": "boolean", "default": false }
+        }
+      }
+    },
+    "operator_routing": {
+      "type": "object",
+      "required": ["target_operator"],
+      "properties": {
+        "target_operator": {
+          "type": "string",
+          "enum": ["nosana-ai-deployment-operator", "nosana-persistent-service-operator", "nosana-node-operator", "nosana-deployment-architect", "manual", "self"],
+          "description": "Which operator should execute the recovery"
+        },
+        "handoff_data": {
+          "type": ["object", "null"],
+          "description": "Structured data to pass to the target operator"
+        }
+      }
+    },
+    "estimated_resolution_minutes": { "type": ["number", "null"] },
+    "requires_user_action": { "type": "boolean" },
+    "retry_config": {
+      "type": ["object", "null"],
+      "properties": {
+        "max_retries": { "type": "integer" },
+        "backoff_seconds": { "type": "integer" },
+        "modify_before_retry": { "type": "boolean" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

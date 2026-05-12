@@ -1,0 +1,18 @@
+{
+  "name": "network-monitor",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Operational skill for querying blockchain state and market conditions on Nosana.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "monitor",
+    "network",
+    "explorer"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "engine"
+}

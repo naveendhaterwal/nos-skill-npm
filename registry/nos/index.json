@@ -1,0 +1,260 @@
+{"skills": [
+{
+  "name": "analyze-ai-project",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Deterministic workload orchestration compiler for the Nosana decentralized GPU network.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "orchestration",
+    "deployment",
+    "gpu"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "app"
+}
+,
+{
+  "name": "debug-nosana-deployment",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Deterministic incident-response engine for Nosana. Classifies failures and plans remediation.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "sre",
+    "recovery",
+    "diagnostics"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "app"
+}
+,
+{
+  "name": "deploy-ai-agent",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Operational skill for deploying autonomous AI agents on Nosana.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "ai-agent",
+    "deployment"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "app"
+}
+,
+{
+  "name": "deploy-ai-project",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Deterministic CLI job execution operator for Nosana. Dispatches validated job definitions to the network via nosana-cli.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "operator",
+    "cli",
+    "job-execution",
+    "gpu",
+    "automation"
+  ],
+  "compatibility": {
+    "nosana-cli": ">=0.1.0"
+  },
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "app"
+}
+,
+{
+  "name": "deploy-persistent-api",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Deterministic deployment lifecycle engine for long-running services on Nosana.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "persistent",
+    "deployment-manager",
+    "always-on"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "app"
+}
+,
+{
+  "name": "recommend-gpu-market",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Economic cost engine for the Nosana skill ecosystem. Computes NOS cost estimates.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "market",
+    "cost",
+    "economics"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "app"
+}
+,
+{
+  "name": "network-monitor",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Operational skill for querying blockchain state and market conditions on Nosana.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "monitor",
+    "network",
+    "explorer"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "engine"
+}
+,
+{
+  "name": "node-operator",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Compute host infrastructure operator for Nosana node providers.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "node",
+    "gpu",
+    "infrastructure"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "engine"
+}
+,
+{
+  "name": "nosana-ai-deployment-operator",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Operational engine skill for Nosana infrastructure.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "engine",
+    "infrastructure"
+  ],
+  "skillType": "engine",
+  "trustLevel": "verified",
+  "entry": "SKILL.md"
+}
+,
+{
+  "name": "nosana-deployment-architect",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Operational engine skill for Nosana infrastructure.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "engine",
+    "infrastructure"
+  ],
+  "skillType": "engine",
+  "trustLevel": "verified",
+  "entry": "SKILL.md"
+}
+,
+{
+  "name": "nosana-failure-recovery-operator",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Operational engine skill for Nosana infrastructure.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "engine",
+    "infrastructure"
+  ],
+  "skillType": "engine",
+  "trustLevel": "verified",
+  "entry": "SKILL.md"
+}
+,
+{
+  "name": "nosana-market-analyst",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Operational engine skill for Nosana infrastructure.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "engine",
+    "infrastructure"
+  ],
+  "skillType": "engine",
+  "trustLevel": "verified",
+  "entry": "SKILL.md"
+}
+,
+{
+  "name": "nosana-persistent-service-operator",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Operational engine skill for Nosana infrastructure.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "engine",
+    "infrastructure"
+  ],
+  "skillType": "engine",
+  "trustLevel": "verified",
+  "entry": "SKILL.md"
+}
+,
+{
+  "name": "skill-composer",
+  "namespace": "nos",
+  "version": "1.0.0",
+  "description": "Typed async orchestration controller for the Nosana skill ecosystem.",
+  "author": "nos",
+  "license": "MIT",
+  "tags": [
+    "nosana",
+    "orchestrator",
+    "composer",
+    "async"
+  ],
+  "compatibility": {},
+  "trustLevel": "verified",
+  "entry": "SKILL.md",
+  "skillType": "engine"
+}
+]}

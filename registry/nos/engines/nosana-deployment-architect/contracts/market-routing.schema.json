@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nosana-deployment-architect/market-routing",
+  "title": "Market Routing Decision",
+  "description": "Structured market selection output with multi-dimensional routing reasoning.",
+  "type": "object",
+  "required": ["selected_market", "vram_constraint_gb", "routing_factors", "alternatives"],
+  "properties": {
+    "selected_market": {
+      "type": "string",
+      "enum": ["gpu-micro", "gpu-small", "gpu-medium", "gpu-large", "gpu-x-large"],
+      "description": "The market slug selected for this deployment"
+    },
+    "vram_constraint_gb": {
+      "type": "number",
+      "minimum": 0,
+      "description": "The VRAM requirement driving market selection"
+    },
+    "routing_factors": {
+      "type": "object",
+      "required": ["vram_fit", "deployment_compatibility"],
+      "properties": {
+        "vram_fit": {
+          "type": "string",
+          "enum": ["exact", "comfortable", "tight", "overflow-risk"],
+          "description": "How well the VRAM requirement fits the market's GPU capacity"
+        },
+        "queue_depth_awareness": {
+          "type": "string",
+          "enum": ["low-queue", "moderate-queue", "high-queue", "saturated", "unknown"],
+          "default": "unknown",
+          "description": "Estimated queue depth — 'unknown' if no live data available"
+        },
+        "deployment_compatibility": {
+          "type": "boolean",
+          "description": "Whether this market supports the requested deployment type"
+        },
+        "cost_tier": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "premium"],
+          "description": "Relative cost level of this market"
+        },
+        "timeout_economics": {
+          "type": "object",
+          "properties": {
+            "recommended_timeout_seconds": { "type": "integer" },
+            "max_affordable_timeout_seconds": { "type": ["integer", "null"] },
+            "nos_per_hour": { "type": ["number", "null"] }
+          }
+        }
+      }
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["market", "reason_not_selected"],
+        "properties": {
+          "market": { "type": "string" },
+          "reason_not_selected": { "type": "string" }
+        }
+      },
+      "description": "Other markets considered and why they were rejected"
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Market-specific warnings (e.g., 'VRAM is tight, consider quantization')"
+    }
+  },
+  "additionalProperties": false
+}
