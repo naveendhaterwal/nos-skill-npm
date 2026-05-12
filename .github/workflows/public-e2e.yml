@@ -36,19 +36,19 @@ jobs:
       - name: Test NPX Runtime (List)
         run: |
           echo "Validating registry loading via npx..."
-          npx nos-skill@beta list
+          npx -y nos-skill@beta list
         shell: bash
 
       - name: Test Semantic Search
         run: |
           echo "Validating search engine..."
-          npx nos-skill@beta search nosana
+          npx -y nos-skill@beta search nosana
         shell: bash
 
       - name: Test Skill Inspection
         run: |
           echo "Validating intelligence engine (inspect)..."
-          npx nos-skill@beta inspect deploy-ai-project
+          npx -y nos-skill@beta inspect deploy-ai-project
         shell: bash
 
       - name: Test Scaffolding (Init)
@@ -57,7 +57,7 @@ jobs:
           # Move to a clean temp directory to ensure no local file interference
           mkdir -p ../isolated-test
           cd ../isolated-test
-          npx nos-skill@beta init test-skill --type nosana-app
+          npx -y nos-skill@beta init test-skill --type nosana-app
           
           if [ ! -f "test-skill/metadata.json" ]; then
             echo "Error: metadata.json missing in scaffolded skill"
@@ -74,11 +74,11 @@ jobs:
       - name: Test System Diagnostics (Doctor)
         run: |
           echo "Validating system health checks..."
-          npx nos-skill@beta doctor
+          npx -y nos-skill@beta doctor
         shell: bash
 
       - name: Test Security Audit
         run: |
           echo "Validating security engine..."
-          npx nos-skill@beta audit --registry
+          npx -y nos-skill@beta audit --registry
         shell: bash
