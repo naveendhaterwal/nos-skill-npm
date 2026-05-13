@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { addCommand } from './commands/add.js';
+import { addAllCommand } from './commands/add-all.js';
 import { removeCommand } from './commands/remove.js';
 import { listCommand } from './commands/list.js';
 import { installedCommand } from './commands/installed.js';
@@ -31,6 +32,14 @@ program
   .option('-y, --yes', 'Automatically approve all prompts', false)
   .action(async (source, options) => {
     try { await addCommand(source, options); } catch (e: any) { logger.error(e.message); process.exit(1); }
+  });
+
+program
+  .command('add-all [namespace]')
+  .description('Install all skills in a namespace (default: nos).')
+  .option('-y, --yes', 'Automatically approve all prompts', false)
+  .action(async (namespace, options) => {
+    try { await addAllCommand(namespace || 'nos', options); } catch (e: any) { logger.error(e.message); process.exit(1); }
   });
 
 program
