@@ -1,5 +1,9 @@
 <div align="center">
-  <img src="https://ibb.co/hqVLdbz" alt="Nosana Logo" width="120" />
+<img 
+  src="https://i.ibb.co/YTXjJB3X/Screenshot-2026-05-13-at-9-29-21-AM.png" 
+  alt="Nosana Logo" 
+  width="50%" 
+/>
   <h1>nos-skill</h1>
   <p><strong>Universal AI Skill Operating System & Installer</strong></p>
   
